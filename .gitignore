@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+
+# Secrets — never commit .env (copy it to .env.example if you change variables)
+.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS junk
+.DS_Store
+Thumbs.db

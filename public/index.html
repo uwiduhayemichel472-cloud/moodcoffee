@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOOD Coffee Shop &amp; Bakery</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--esp:#1a0a00;--dk:#2c1200;--latte:#c8956c;--cream:#f5e6d3;--foam:#fdf6ee;--gold:#d4a060;--gl:#e8c080}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Jost',sans-serif;background:var(--esp);color:var(--cream);overflow-x:hidden}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;justify-content:space-between;align-items:center;padding:26px 56px;background:linear-gradient(to bottom,rgba(26,10,0,.92),transparent);transition:all .4s}
+nav.scrolled{background:rgba(18,6,0,.97);padding:14px 56px;border-bottom:1px solid rgba(212,160,96,.15)}
+.logo{font-family:'Cormorant Garamond',serif;font-size:1.9rem;font-weight:300;letter-spacing:.08em;color:var(--gl);text-decoration:none}
+.logo em{font-style:italic;color:var(--latte)}
+.logo small{display:block;font-family:'Jost',sans-serif;font-size:.52rem;letter-spacing:.34em;text-transform:uppercase;color:rgba(245,230,211,.5);margin-top:2px}
+nav ul{list-style:none;display:flex;gap:34px;align-items:center}
+.burger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:10px;z-index:210}
+.burger span{display:block;width:24px;height:2px;background:var(--gold);transition:all .3s}
+nav.open{background:rgba(16,7,1,.98)}
+nav.open .burger span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+nav.open .burger span:nth-child(2){opacity:0}
+nav.open .burger span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+nav a{font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--cream);text-decoration:none;opacity:.7}
+nav a:hover{opacity:1;color:var(--gl)}
+.btn{background:var(--gold)!important;color:var(--esp)!important;opacity:1!important;padding:10px 22px;border-radius:2px;cursor:pointer}
+.lang-switch{position:relative;display:inline-block}
+.lang-toggle{display:flex;align-items:center;gap:6px;background:none;border:1px solid rgba(212,160,96,.3);color:var(--cream);font-family:'Jost',sans-serif;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border-radius:3px;cursor:pointer;opacity:.8;transition:all .2s}
+.lang-toggle:hover{opacity:1;border-color:var(--gold)}
+.lang-toggle .globe{font-size:.85rem}
+.lang-toggle .caret{font-size:.6rem;opacity:.7}
+.lang-menu{position:absolute;top:calc(100% + 6px);right:0;min-width:150px;background:var(--dk);border:1px solid rgba(212,160,96,.25);border-radius:6px;padding:5px;display:none;flex-direction:column;z-index:300;box-shadow:0 12px 32px rgba(0,0,0,.5)}
+.lang-switch.open .lang-menu{display:flex;animation:up .2s both}
+.lang-option{background:none;border:none;color:var(--cream);font-family:'Jost',sans-serif;font-size:.78rem;text-align:left;padding:8px 12px;border-radius:4px;cursor:pointer;transition:background .15s,color .15s}
+.lang-option:hover{background:rgba(212,160,96,.12);color:var(--gl)}
+.lang-option.active{color:var(--gold);font-weight:500}
+.lang-option.active::before{content:'✓ ';color:var(--gold)}
+#hero{position:relative;height:100vh;min-height:640px;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden}
+#hero .bg{position:absolute;inset:0;background:url('https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=1920&q=90&auto=format&fit=crop') center/cover;animation:z 18s ease-out forwards}
+@keyframes z{from{transform:scale(1.06)}to{transform:scale(1)}}
+#hero .ov{position:absolute;inset:0;background:linear-gradient(160deg,rgba(10,4,0,.75),rgba(30,12,0,.5),rgba(10,4,0,.8))}
+.hero-in{position:relative;z-index:2;max-width:880px;padding:0 24px;animation:up .9s .3s both}
+.eyebrow{font-size:.68rem;letter-spacing:.4em;text-transform:uppercase;color:var(--gold);margin-bottom:26px}
+h1{font-family:'Cormorant Garamond',serif;font-size:clamp(3.4rem,9vw,8rem);font-weight:300;line-height:.94;color:var(--foam)}
+h1 em{font-style:italic;color:var(--gl);display:block}
+.sub{font-size:.95rem;font-weight:200;letter-spacing:.05em;color:rgba(245,230,211,.72);max-width:480px;margin:30px auto 0;line-height:1.9}
+.acts{display:flex;gap:16px;justify-content:center;margin-top:48px;flex-wrap:wrap}
+.a-btn,.g-btn{font-size:.74rem;letter-spacing:.22em;text-transform:uppercase;padding:16px 44px;cursor:pointer;font-family:'Jost',sans-serif}
+.a-btn{background:var(--gold);color:var(--esp);border:none;font-weight:500}
+.a-btn:hover{background:var(--gl)}
+.g-btn{background:transparent;color:var(--cream);border:1px solid rgba(245,230,211,.3)}
+.g-btn:hover{border-color:var(--gold);color:var(--gold)}
+@keyframes up{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+.mq{background:var(--gold);padding:12px 0;overflow:hidden;white-space:nowrap}
+.mq span{font-size:.68rem;letter-spacing:.26em;text-transform:uppercase;color:var(--esp);font-weight:500;padding:0 24px}
+.mq .d{color:rgba(26,10,0,.38)}
+section{padding:110px 56px}
+#about{display:grid;grid-template-columns:1fr 1fr;min-height:600px;padding:0}
+#about .img{background:url('https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=900&q=85&auto=format&fit=crop') center/cover;position:relative}
+#about .img::after{content:'';position:absolute;inset:0;background:linear-gradient(to right,transparent 60%,var(--dk))}
+#about .txt{background:var(--dk);display:flex;flex-direction:column;justify-content:center;padding:70px 64px}
+.lbl{font-size:.64rem;letter-spacing:.36em;text-transform:uppercase;color:var(--gold);margin-bottom:16px}
+h2{font-family:'Cormorant Garamond',serif;font-size:clamp(2rem,3.4vw,3.2rem);font-weight:300;line-height:1.1;color:var(--foam);margin-bottom:22px}
+h2 em{font-style:italic;color:var(--gl)}
+#mission{background:var(--dk);padding:110px 56px}
+.mwrap{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
+#mission p.body{font-size:.9rem;line-height:1.95;font-weight:200;color:rgba(245,230,211,.7);max-width:460px;margin-bottom:26px}
+.goal{display:flex;gap:14px;align-items:flex-start;padding:13px 0;border-bottom:1px solid rgba(212,160,96,.1)}
+.goal:last-child{border-bottom:none}
+.goal .tick{color:var(--gold);font-family:'Cormorant Garamond',serif;font-size:1.15rem;line-height:1.4;width:22px;flex-shrink:0}
+.goal b{display:block;font-family:'Cormorant Garamond',serif;font-weight:300;color:var(--foam);font-size:1.05rem;margin-bottom:2px}
+.goal p{font-size:.8rem;font-weight:200;color:rgba(245,230,211,.55);line-height:1.6}
+#why .wgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;max-width:1080px;margin:0 auto}
+.wc{position:relative;background:var(--dk);border:1px solid rgba(212,160,96,.14);border-radius:10px;padding:34px 28px;overflow:hidden;text-align:left;transition:all .3s}
+.wc::before{content:attr(data-n);position:absolute;top:14px;right:18px;font-family:'Cormorant Garamond',serif;font-size:5rem;font-weight:300;line-height:1;color:rgba(212,160,96,.13)}
+.wc:hover{transform:translateY(-5px);border-color:var(--gold)}
+.wline{width:34px;height:1px;background:var(--gold);margin-bottom:18px}
+.wc h3{font-family:'Cormorant Garamond',serif;font-weight:300;color:var(--foam);font-size:1.5rem;line-height:1.15;margin-bottom:10px}
+.wc h3 em{font-style:italic;color:var(--gl)}
+.wc p{font-size:.8rem;font-weight:200;color:rgba(245,230,211,.55);line-height:1.75}
+#map{padding:110px 56px 120px;background:var(--esp)}
+.mapwrap{max-width:1080px;margin:0 auto}
+.mapaddr{text-align:center;font-size:.88rem;font-weight:200;line-height:1.9;color:rgba(245,230,211,.6);margin-top:22px}
+.mframe{position:relative;border-radius:12px;overflow:hidden;border:1px solid rgba(212,160,96,.2);margin-top:44px;height:440px;box-shadow:0 30px 70px rgba(0,0,0,.45)}
+.mframe iframe{width:100%;height:100%;border:0;filter:grayscale(.35) sepia(.12) brightness(.96) contrast(1.02)}
+#about p.body{font-size:.9rem;line-height:1.95;font-weight:200;color:rgba(245,230,211,.7);max-width:430px;margin-bottom:26px}
+.stats{display:flex;gap:40px;margin-top:14px}
+.stat b{font-family:'Cormorant Garamond',serif;font-size:2.6rem;font-weight:300;color:var(--gl);display:block}
+.stat span{font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(245,230,211,.45)}
+.sec-h{text-align:center;margin-bottom:60px}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:1080px;margin:0 auto}
+.card{position:relative;overflow:hidden;border-radius:10px;min-height:360px;display:flex;align-items:flex-end;cursor:default}
+.card .bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.55) saturate(.85);transition:transform .7s,filter .4s}
+.card:hover .bg{transform:scale(1.08);filter:brightness(.4)}
+.card .info{position:relative;z-index:2;padding:26px;width:100%;background:linear-gradient(to top,rgba(8,2,0,.96),transparent)}
+.card h3{font-family:'Cormorant Garamond',serif;font-size:1.7rem;font-weight:300;color:var(--foam)}
+.card .tag{font-size:.6rem;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+.card .price{font-family:'Cormorant Garamond',serif;font-size:1.3rem;color:var(--gl);margin-top:8px}
+#exp{position:relative;min-height:460px;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;padding:0}
+#exp .bg{position:absolute;inset:0;background:url('https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=1920&q=85&auto=format&fit=crop') center/cover}
+#exp .ov{position:absolute;inset:0;background:rgba(8,3,0,.7)}
+#exp blockquote{position:relative;z-index:2;font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:1.4rem;color:rgba(245,230,211,.78);max-width:680px;padding:0 24px;line-height:1.85}
+#visit{display:grid;grid-template-columns:1fr 1fr;background:var(--dk);padding:0}
+#visit .img{background:url('https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=900&q=85&auto=format&fit=crop') center/cover;position:relative}
+#visit .img::after{content:'';position:absolute;inset:0;background:linear-gradient(to left,transparent 40%,var(--dk))}
+#visit .txt{padding:70px 64px;display:flex;flex-direction:column;justify-content:center}
+.hrow{display:flex;justify-content:space-between;padding:14px 0;border-bottom:1px solid rgba(212,160,96,.12);font-size:.85rem;font-weight:300;color:rgba(245,230,211,.7)}
+.hrow b{color:var(--gl);font-family:'Cormorant Garamond',serif;font-weight:300;font-size:1.05rem}
+.addr{margin-top:30px;font-size:.88rem;line-height:1.9;font-weight:200;color:rgba(245,230,211,.6)}
+#news{text-align:center;background:var(--esp)}
+#news .wrap{max-width:640px;margin:0 auto}
+form{display:flex;gap:10px;margin:30px auto 0;max-width:600px}
+input{flex:1;padding:15px 18px;background:rgba(5,2,0,.6);border:1px solid rgba(212,160,96,.25);color:var(--cream);font-family:'Jost',sans-serif;font-size:.88rem;outline:none}
+input:focus{border-color:var(--gold)}
+form button{background:var(--gold);border:none;color:var(--esp);font-family:'Jost',sans-serif;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;padding:0 26px;cursor:pointer;font-weight:500}
+form button:hover{background:var(--gl)}
+#nlMsg{margin-top:16px;font-size:.82rem;color:var(--gl);min-height:20px}
+#reserve{background:var(--dk)}
+#reserve .wrap,#gift .wrap{max-width:720px;margin:0 auto;text-align:center}
+#resForm{display:flex;gap:10px;margin:30px auto 0;max-width:640px;flex-wrap:wrap;justify-content:center}
+#resForm input{min-width:150px;flex:1}
+#rsMsg{margin-top:16px;font-size:.82rem;min-height:20px;color:var(--gl);white-space:pre-line}
+/* ── Chocolate-native date & time pickers (all dates remain selectable) ── */
+#resForm input[type="date"],#resForm input[type="time"]{color-scheme:dark;-webkit-appearance:none;-moz-appearance:field}
+#resForm input[type="date"]::-webkit-calendar-picker-indicator,#resForm input[type="time"]::-webkit-calendar-picker-indicator{
+  filter:invert(78%) sepia(42%) saturate(520%) hue-rotate(352deg) brightness(92%) contrast(88%);cursor:pointer;opacity:.95}
+#resForm input[type="date"]::-webkit-datetime-edit-field:focus,#resForm input[type="time"]::-webkit-datetime-edit-field:focus{background:rgba(212,160,96,.22);border-radius:2px}
+/* ── Landing-page account modal ── */
+.nbtn{background:none;border:1px solid rgba(212,160,96,.32);color:var(--cream);font-family:'Jost',sans-serif;font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;padding:9px 16px;border-radius:2px;cursor:pointer;opacity:.78;transition:all .2s}
+.nbtn:hover{opacity:1;color:var(--gl);border-color:var(--gold)}
+.auth-ovl{position:fixed;inset:0;background:rgba(5,2,0,.78);z-index:600;display:none}
+.auth-ovl.open{display:block}
+.auth-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:601;width:100%;max-width:400px;background:var(--dk);border:1px solid rgba(212,160,96,.22);border-radius:12px;padding:34px;display:none;box-shadow:0 24px 60px rgba(0,0,0,.45)}
+.auth-modal.open{display:block;animation:up .25s both}
+.auth-modal .x{position:absolute;top:14px;right:18px;background:none;border:none;color:rgba(245,230,211,.4);font-size:1.5rem;cursor:pointer}
+.auth-modal .x:hover{color:var(--gold)}
+.auth-modal .mt{font-family:'Cormorant Garamond',serif;font-size:1.7rem;font-weight:300;color:var(--foam);margin-bottom:6px}
+.auth-modal .ms{font-size:.8rem;font-weight:200;color:rgba(245,230,211,.5);margin-bottom:22px;line-height:1.7}
+.auth-modal label{display:block;margin-bottom:12px;font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
+.auth-modal label input{width:100%;margin-top:6px;padding:11px 14px;background:rgba(5,2,0,.5);border:1px solid rgba(212,160,96,.2);color:var(--cream);font-family:'Jost',sans-serif;font-size:.88rem;outline:none;border-radius:5px}
+.auth-modal label input:focus{border-color:var(--gold)}
+.auth-modal .auth-btn{width:100%;margin-top:4px;padding:14px;background:var(--gold);border:none;color:var(--esp);font-family:'Jost',sans-serif;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;font-weight:500;border-radius:6px}
+.auth-modal .auth-btn:hover{background:var(--gl)}
+.auth-modal .swap{text-align:center;margin-top:16px;font-size:.78rem;color:rgba(245,230,211,.5)}
+.auth-modal .swap b{color:var(--gold);cursor:pointer;font-weight:400}
+.auth-modal .err{color:#e07070;font-size:.76rem;margin-top:10px;display:none}
+.cf-ovl{position:fixed;inset:0;background:rgba(5,2,0,.78);z-index:650;display:none}
+.cf-ovl.open{display:block}
+.cf-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:651;width:100%;max-width:310px;background:var(--dk);border:1px solid rgba(212,160,96,.22);border-radius:12px;padding:30px 26px 24px;display:none;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.45)}
+.cf-modal.open{display:block;animation:up .25s both}
+.cf-modal .cf-cup{font-size:1.9rem;margin-bottom:10px}
+.cf-modal .cf-hd{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:1.3rem;color:var(--foam)}
+.cf-modal .cf-msg{font-size:.78rem;font-weight:200;color:rgba(245,230,211,.6);line-height:1.7;margin:12px 0 22px}
+.cf-modal .cf-act{display:flex;gap:10px}
+.cf-modal .cf-bt{flex:1;padding:11px 0;border:none;border-radius:8px;font-family:'Jost',sans-serif;font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;cursor:pointer}
+.cf-modal .cf-bt.ghost{background:transparent;color:var(--cream);border:1px solid rgba(212,160,96,.35)}
+.cf-modal .cf-bt.ghost:hover{background:rgba(212,160,96,.1)}
+.cf-modal .cf-bt.danger{background:linear-gradient(135deg,#a63c2f,#6f2017);color:#fff}
+.cf-modal .cf-bt.danger:hover{background:linear-gradient(135deg,#bd4a3b,#7f241a)}
+#gift{background:var(--esp)}
+.giftbtn{display:inline-block;margin-top:26px;background:var(--gold);color:var(--esp);text-decoration:none;font-family:'Jost',sans-serif;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;padding:15px 30px;font-weight:500;transition:background .2s}
+.giftbtn:hover{background:var(--gl)}
+.waf{position:fixed;right:22px;bottom:22px;z-index:300;width:54px;height:54px;border-radius:50%;background:#25d366;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.45);transition:transform .2s}
+.waf:hover{transform:scale(1.08)}
+.waf[href="#"]{display:none}
+footer{background:var(--esp);padding:56px 56px 30px;border-top:1px solid rgba(212,160,96,.1)}
+.fgrid{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap;margin-bottom:36px}
+footer h4{font-size:.6rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-bottom:14px}
+footer li{list-style:none;font-size:.8rem;font-weight:200;color:rgba(245,230,211,.45);margin-bottom:9px}
+footer li a{color:inherit;text-decoration:none}
+footer li a:hover{color:var(--gl)}
+.fbot{border-top:1px solid rgba(212,160,96,.08);padding-top:22px;display:flex;justify-content:space-between;font-size:.7rem;color:rgba(245,230,211,.3);flex-wrap:wrap;gap:8px}
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .9s,transform .9s}
+.reveal.on{opacity:1;transform:none}
+@media(max-width:900px){
+  nav{padding:14px 20px}
+  .burger{display:flex}
+  nav ul{display:none;position:fixed;top:0;right:0;bottom:0;width:min(78vw,320px);flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:24px;background:rgba(16,7,1,.99);padding:104px 34px 40px;box-shadow:-16px 0 48px rgba(0,0,0,.5);z-index:150;overflow-y:auto}
+  nav ul.open{display:flex}
+  nav.open .burger{position:fixed;top:12px;right:20px}
+  #about,#visit{grid-template-columns:1fr}#about .img,#visit .img{min-height:280px}
+  #about .txt,#visit .txt{padding:50px 28px}
+  .mwrap{grid-template-columns:1fr;gap:36px}
+  .wgrid{grid-template-columns:1fr 1fr;max-width:460px}
+  #map .mframe{height:320px}
+  .mgrid{grid-template-columns:1fr;max-width:420px}
+  section{padding:80px 24px}
+  form{flex-direction:column}
+  footer{padding:44px 24px 24px}
+}
+</style>
+</head>
+<body>
+<nav id="nav">
+  <a class="logo" href="/">MOOD<em>.</em><small>Coffee Shop & Bakery</small></a>
+  <ul>
+    <li><a href="#about" data-i18n="nav_story">Our Story</a></li>
+    <li><a href="#menu" data-i18n="nav_menu">Menu</a></li>
+    <li><a href="#why" data-i18n="nav_why">Why Us</a></li>
+    <li><a href="#visit" data-i18n="nav_visit">Visit</a></li>
+    <li><a class="btn" href="/shop" data-i18n="nav_order">Order Online</a></li>
+    <li id="landAuth"></li>
+    <li class="lang-switch" data-lang-switch></li>
+  </ul>
+  <button class="burger" aria-label="Menu" onclick="toggleNav()"><span></span><span></span><span></span></button>
+</nav>
+
+<section id="hero">
+  <div class="bg"></div><div class="ov"></div>
+  <div class="hero-in">
+    <p class="eyebrow" data-i18n="hero_eyebrow">Est. 2018 &nbsp;&middot;&nbsp; Coffee & Bakery</p>
+    <h1><span data-i18n="hero_title1">Good Coffee.</span><em data-i18n="hero_title2">Great Mood.</em></h1>
+    <p class="sub" data-i18n="hero_sub">Freshly roasted single-origin coffee and baked-from-scratch pastries, served warm with a side of good energy — right here in Kigali.</p>
+    <div class="acts">
+      <a class="a-btn" href="/shop" data-i18n="hero_order">Order Now</a>
+      <a class="g-btn" href="#menu" data-i18n="hero_menu">See the Menu</a>
+    </div>
+  </div>
+</section>
+
+<div class="mq">
+  <span data-i18n="mq1">Single Origin Espresso</span><span class="d">✶</span><span data-i18n="mq2">Cold Brew Reserve</span><span class="d">✶</span><span data-i18n="mq3">Fresh Bakery Daily</span><span class="d">✶</span><span data-i18n="mq4">Pour Over Ceremony</span><span class="d">✶</span><span data-i18n="mq5">Ethiopian Yirgacheffe</span><span class="d">✶</span>
+  <span data-i18n="mq1">Single Origin Espresso</span><span class="d">✶</span><span data-i18n="mq2">Cold Brew Reserve</span><span class="d">✶</span><span data-i18n="mq3">Fresh Bakery Daily</span><span class="d">✶</span><span data-i18n="mq4">Pour Over Ceremony</span><span class="d">✶</span><span data-i18n="mq5">Ethiopian Yirgacheffe</span><span class="d">✶</span>
+</div>
+
+<section id="about">
+  <div class="img"></div>
+  <div class="txt reveal">
+    <p class="lbl" data-i18n="about_lbl">Our Philosophy</p>
+    <h2><span data-i18n="about_title1">Crafted with</span> <em>Patience,</em><br><span data-i18n="about_title2">Baked with Soul</span></h2>
+    <p class="body" data-i18n="about_p1">We believe great coffee and bread are not accidents. Beans are sourced from small family farms, roasted in small batches, and pastries are baked fresh every morning.</p>
+    <p class="body" style="margin-bottom:0" data-i18n="about_p2">Step inside, slow down, and taste the difference that care makes.</p>
+    <div class="stats">
+      <div class="stat"><b>12+</b><span data-i18n="stat_origins">Origins Sourced</span></div>
+      <div class="stat"><b>7</b><span data-i18n="stat_years">Years Roasting</span></div>
+      <div class="stat"><b>40k</b><span data-i18n="stat_cups">Cups Served</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="mission">
+  <div class="mwrap reveal">
+    <div>
+      <p class="lbl" data-i18n="mission_lbl">Mission & Goals</p>
+      <h2><span data-i18n="mission_t1">Why We</span> <em data-i18n="mission_brew">Brew,</em><br><span data-i18n="mission_t2">Why We Bake</span></h2>
+    </div>
+    <div>
+      <p class="body" data-i18n="mission_body">Our mission is simple: to make exceptional coffee and honest, freshly-baked food part of everyday life in Kigali — while treating the people behind every bean and every loaf with respect.</p>
+      <div class="goal"><div class="tick">✓</div><div><b data-i18n="goal1_t">Serve the freshest cup</b><p data-i18n="goal1_d">Small-batch roasting and grinding only what we use each day.</p></div></div>
+      <div class="goal"><div class="tick">✓</div><div><b data-i18n="goal2_t">Bake from scratch, daily</b><p data-i18n="goal2_d">Pastries and breads made by hand every single morning.</p></div></div>
+      <div class="goal"><div class="tick">✓</div><div><b data-i18n="goal3_t">Support local growers</b><p data-i18n="goal3_d">Fair prices for Rwandan and East African coffee farmers.</p></div></div>
+      <div class="goal"><div class="tick">✓</div><div><b data-i18n="goal4_t">Build community</b><p data-i18n="goal4_d">A warm, welcoming space where everyone feels at home.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="menu">
+  <div class="sec-h reveal">
+    <p class="lbl" data-i18n="menu_lbl">Signature Drinks</p>
+    <h2><span data-i18n="menu_t1">The</span> <em data-i18n="menu_t2">Ritual</em> <span data-i18n="menu_t3">Menu</span></h2>
+  </div>
+  <div class="mgrid" id="menuGrid"></div>
+</section>
+
+<section id="why">
+  <div class="sec-h reveal">
+    <p class="lbl" data-i18n="why_lbl">Why Choose Us</p>
+    <h2><span data-i18n="why_t1">Made with</span> <em>Mood.</em><br><span data-i18n="why_t2">Kept with Care.</span></h2>
+  </div>
+  <div class="wgrid">
+    <div class="wc reveal" data-n="01"><div class="wline"></div><h3><span data-i18n="why1_t">Single-Origin</span> <em data-i18n="why1_t2">Coffee</em></h3><p data-i18n="why1_d">Beans from small family farms, roasted in small batches for a bright, balanced cup.</p></div>
+    <div class="wc reveal" data-n="02"><div class="wline"></div><h3><span data-i18n="why2_t">Baked</span> <em data-i18n="why2_t2">Fresh Daily</em></h3><p data-i18n="why2_d">Croissants, sourdough and cakes made from scratch every morning — never frozen.</p></div>
+    <div class="wc reveal" data-n="03"><div class="wline"></div><h3><span data-i18n="why3_t">Fast &</span> <em data-i18n="why3_t2">Warm</em></h3><p data-i18n="why3_d">Order online and we'll have your coffee and bakes ready before you arrive.</p></div>
+    <div class="wc reveal" data-n="04"><div class="wline"></div><h3><span data-i18n="why4_t">Local &</span> <em data-i18n="why4_t2">Fair</em></h3><p data-i18n="why4_d">Supporting Rwandan growers and local suppliers with every single purchase.</p></div>
+  </div>
+</section>
+
+<section id="exp">
+  <div class="bg"></div><div class="ov"></div>
+  <blockquote data-i18n="exp_quote">"The best coffee is the one you drink slowly, in a place that makes you feel truly alive."</blockquote>
+</section>
+
+<section id="visit">
+  <div class="img"></div>
+  <div class="txt reveal">
+    <p class="lbl" data-i18n="visit_lbl">Come Find Us</p>
+    <h2><span data-i18n="visit_t1">Hours &</span> <em data-i18n="visit_t2">Location</em></h2>
+    <div class="hrow"><span data-i18n="day_mon_fri">Monday – Friday</span><b>7:00 AM – 8:00 PM</b></div>
+    <div class="hrow"><span data-i18n="day_sat">Saturday</span><b>8:00 AM – 9:00 PM</b></div>
+    <div class="hrow"><span data-i18n="day_sun">Sunday</span><b>9:00 AM – 7:00 PM</b></div>
+    <p class="addr">Kagugu, Kigali<br>Rwanda &nbsp;&middot;&nbsp; <span id="lPhone">+250 788 000 000</span></p>
+  </div>
+</section>
+
+<section id="map">
+  <div class="mapwrap reveal">
+    <div class="sec-h" style="margin-bottom:0">
+      <p class="lbl" data-i18n="map_lbl">Find Us on the Map</p>
+      <h2><span data-i18n="map_t1">Right in the</span> <em data-i18n="map_t2">Heart of Kigali</em></h2>
+    </div>
+    <div class="mframe">
+      <iframe id="mapFrame" src="https://www.google.com/maps?q=Kagugu,+Kigali,+Rwanda&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+    </div>
+    <p class="mapaddr" id="mAddr">Kagugu, Kigali, Rwanda</p>
+  </div>
+</section>
+
+<section id="reserve">
+  <div class="wrap reveal">
+    <div class="sec-h" style="margin-bottom:0">
+      <p class="lbl">Book a Table</p>
+      <h2><span>Reserve Your</span> <em>Mood.</em></h2>
+      <p class="sub" style="margin-bottom:8px">Save your seat — we'll have the table, coffee and pastries ready for you.</p>
+    </div>
+    <form id="resForm" class="resform">
+      <input id="rsName" placeholder="Your name" required>
+      <input id="rsPhone" placeholder="+250 7XX XXX XXX" required>
+      <input id="rsGuests" type="number" min="1" max="50" value="2" required>
+      <input id="rsDate" type="date" required>
+      <input id="rsTime" type="time" required>
+      <button type="submit">Reserve a Table</button>
+    </form>
+    <p id="rsMsg"></p>
+  </div>
+</section>
+
+<section id="gift">
+  <div class="wrap reveal">
+    <div class="sec-h" style="margin-bottom:0">
+      <p class="lbl">Gift Cards</p>
+      <h2><span>Give the Gift of</span> <em>Mood.</em></h2>
+      <p class="sub" style="margin-bottom:8px">Buy a digital gift card — the perfect present for coffee and pastry lovers. Codes are delivered instantly and can be redeemed at checkout in our online shop.</p>
+      <a class="giftbtn" href="/shop" data-i18n="footer_order">Buy a Gift Card</a>
+    </div>
+  </div>
+</section>
+
+<section id="news">
+  <div class="wrap reveal">
+    <p class="lbl" data-i18n="news_lbl">Stay in the Loop</p>
+    <h2><span data-i18n="news_t1">Join the</span> <em data-i18n="news_t2">Mood.</em></h2>
+    <p class="sub" style="margin-bottom:8px" data-i18n="news_sub">Share your email and your favourite roast — we'll send a personal welcome and coffee recommendation.</p>
+    <form id="nlForm">
+      <input id="nlName" data-i18n-ph="news_name" placeholder="Your name">
+      <input id="nlEmail" type="email" data-i18n-ph="news_email" placeholder="your@email.com" required>
+      <button type="submit" data-i18n="news_join">Join</button>
+    </form>
+    <p id="nlMsg"></p>
+  </div>
+</section>
+
+<footer>
+  <div class="fgrid">
+    <div>
+      <div class="logo" style="font-size:1.7rem">MOOD<em>.</em></div>
+      <p style="font-size:.78rem;font-weight:200;color:rgba(245,230,211,.4);margin-top:6px">Coffee Shop &amp; Bakery &middot; Est. 2018</p>
+    </div>
+    <div>
+      <h4 data-i18n="footer_explore">Explore</h4>
+      <li><a href="/shop" data-i18n="footer_order">Order Online</a></li>
+      <li><a href="#menu" data-i18n="nav_menu">Menu</a></li>
+      <li><a href="#about" data-i18n="nav_story">Our Story</a></li>
+      <li><a href="#why" data-i18n="nav_why">Why Us</a></li>
+      <li><a href="#map" data-i18n="nav_visit">Find Us</a></li>
+    </div>
+    <div>
+      <h4 data-i18n="footer_connect">Connect</h4>
+      <li><a data-social="instagram" href="#" target="_blank" rel="noopener">Instagram</a></li>
+      <li><a data-social="facebook" href="#" target="_blank" rel="noopener">Facebook</a></li>
+      <li><a data-social="tiktok" href="#" target="_blank" rel="noopener">TikTok</a></li>
+      <li><a data-social="whatsapp" href="#" target="_blank" rel="noopener">WhatsApp</a></li>
+    </div>
+  </div>
+  <div class="fbot">
+    <span>&copy; <span id="fYr">2025</span> <span id="fName">MOOD Coffee Shop & Bakery</span>. <span data-i18n="footer_rights">All rights reserved.</span></span>
+    <span data-i18n="footer_made">Made with love in Kigali ☕</span>
+  </div>
+</footer>
+
+<div class="auth-ovl" id="authOvl" onclick="closeAuth()"></div>
+<div class="auth-modal" id="authBox">
+  <button class="x" onclick="closeAuth()">&times;</button>
+  <div id="authContent"></div>
+</div>
+
+<div class="cf-ovl" id="cfOvl" onclick="landCloseCf()"></div>
+<div class="cf-modal" id="cfBox">
+  <div class="cf-cup">☕</div>
+  <div class="cf-hd">Log out of MOOD?</div>
+  <p class="cf-msg" id="cfMsg"></p>
+  <div class="cf-act">
+    <button class="cf-bt ghost" onclick="landCloseCf()">Cancel</button>
+    <button class="cf-bt danger" onclick="landDoCf()">Log out</button>
+  </div>
+</div>
+
+<a id="waBtn" class="waf" target="_blank" rel="noopener" aria-label="Chat on WhatsApp">
+  <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.945C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.51 5.26l-.999 3.648 3.978-1.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/></svg>
+</a>
+
+<script src="i18n.js"></script>
+<script>
+var nav=document.getElementById('nav');
+addEventListener('scroll',function(){nav.classList.toggle('scrolled',scrollY>60);});
+function toggleNav(){nav.classList.toggle('open');}
+nav.addEventListener('click',function(e){if(e.target.closest('a,button')&&!e.target.closest('.lang-switch')&&!e.target.closest('.burger'))nav.classList.remove('open');});
+function reveal(){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting)e.target.classList.add('on');});},{threshold:.12});document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});}
+reveal();
+document.getElementById('nlForm').addEventListener('submit',async function(e){
+  e.preventDefault();
+  var msg=document.getElementById('nlMsg');
+  try{
+    var r=await fetch('/api/newsletter',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:document.getElementById('nlName').value,email:document.getElementById('nlEmail').value})});
+    var j=await r.json();
+    if(j.ok){
+      msg.textContent=j.mailOk
+        ? 'Thanks for joining the MOOD! Your details have been sent straight to our team. ☕'
+        : 'Welcome to the MOOD! We\'ve saved your details — we\'ll be in touch soon.';
+      msg.style.color='var(--gl)';
+      this.reset();
+    }else{
+      msg.textContent=j.error||'Something went wrong. Please try again.';
+      msg.style.color='#e07070';
+    }
+  }catch(err){msg.textContent='Something went wrong. Please try again.';msg.style.color='#e07070';}
+});
+/* ─── Account: login / sign up on the landing page ─── */
+var currentUser=null;
+var pendingReserve=false;
+function landAuthButtons(){
+  var a=document.getElementById('landAuth'); if(!a)return;
+  if(currentUser){
+    a.innerHTML='<button class="nbtn" onclick="landLogout()">'+currentUser.name.split(' ')[0]+' · Logout</button>';
+    var n=document.getElementById('rsName'),p=document.getElementById('rsPhone');
+    if(n&&!n.value)n.value=currentUser.name;
+    if(p&&!p.value)p.value=currentUser.phone||'';
+  }else{
+    a.innerHTML='<button class="nbtn" onclick="openAuth(\'login\')">Login</button>'+
+      '<button class="nbtn" onclick="openAuth(\'signup\')">Sign Up</button>';
+  }
+}
+function openAuth(mode){
+  var isLogin=mode==='login';
+  document.getElementById('authContent').innerHTML =
+    '<div class="mt">'+(isLogin?'Welcome Back':'Create Account')+'</div>'+
+    '<div class="ms">'+(isLogin?'Sign in to book a table & order online.':'Join the MOOD today — it takes less than a minute.')+'</div>'+
+    (isLogin?'':'<label>Full Name<input id="auName"></label>')+
+    '<label>Email<input id="auEmail" type="email"></label>'+
+    (isLogin?'':'<label>Phone (optional)<input id="auPhone" placeholder="+250 7XX XXX XXX"></label>')+
+    '<label>Password<input id="auPass" type="password"></label>'+
+    '<div class="err" id="auErr"></div>'+
+    '<button class="auth-btn" onclick="submitAuth(\''+mode+'\')">'+(isLogin?'Login':'Create Account')+'</button>'+
+    '<div class="swap">'+(isLogin?'No account? <b onclick="openAuth(\'signup\')">Sign up free</b>':'Have an account? <b onclick="openAuth(\'login\')">Login</b>')+'</div>';
+  document.getElementById('authOvl').classList.add('open');
+  document.getElementById('authBox').classList.add('open');
+}
+function closeAuth(){
+  document.getElementById('authOvl').classList.remove('open');
+  document.getElementById('authBox').classList.remove('open');
+}
+async function submitAuth(mode){
+  var name=(document.getElementById('auName')||{}).value||'';
+  var phone=(document.getElementById('auPhone')||{}).value||'';
+  var email=document.getElementById('auEmail').value;
+  var pass=document.getElementById('auPass').value;
+  var err=document.getElementById('auErr');
+  if(email.indexOf('@')<0||pass.length<6){
+    err.textContent='Enter a valid email and a 6+ character password.';err.style.display='block';return;
+  }
+  try{
+    var r=await fetch('/api/'+(mode==='login'?'login':'register'),{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:name,phone:phone,email:email,password:pass})});
+    var j=await r.json();
+    if(!r.ok){err.textContent=j.error||'Could not sign in.';err.style.display='block';return;}
+    currentUser=j.user; closeAuth(); landAuthButtons();
+    var m=document.getElementById('rsMsg');
+    if(pendingReserve){
+      pendingReserve=false;
+      document.getElementById('resForm').dispatchEvent(new Event('submit'));
+      return;
+    }
+    m.textContent='Signed in as '+currentUser.name.split(' ')[0]+'. You can now reserve your table below.';
+    m.style.color='var(--gl)';
+  }catch(e){err.textContent='Something went wrong. Please try again.';err.style.display='block';}
+}
+var _cfCb=null;
+function landAskCf(msg,cb){
+  document.getElementById('cfMsg').textContent=msg; _cfCb=cb;
+  document.getElementById('cfOvl').classList.add('open'); document.getElementById('cfBox').classList.add('open');
+}
+function landCloseCf(){ document.getElementById('cfOvl').classList.remove('open'); document.getElementById('cfBox').classList.remove('open'); _cfCb=null; }
+function landDoCf(){ var cb=_cfCb; landCloseCf(); if(cb)cb(); }
+function landLogout(){
+  landAskCf('Log out of your MOOD account?',function(){
+    fetch('/api/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(function(){});
+    currentUser=null; landAuthButtons();
+    var m=document.getElementById('rsMsg');
+    m.textContent='You have been logged out. Sign back in to reserve a table.';
+    m.style.color='var(--gl)';
+  });
+}
+landAuthButtons();
+/* ─── Reservation form: login required + today/future dates only ─── */
+function resToday(){
+  var d=new Date(),m=('0'+(d.getMonth()+1)).slice(-2),day=('0'+d.getDate()).slice(-2);
+  return d.getFullYear()+'-'+m+'-'+day;
+}
+function resMinTime(){
+  var d=new Date(); d.setMinutes(d.getMinutes()+30);
+  var h=('0'+d.getHours()).slice(-2),m=('0'+d.getMinutes()).slice(-2);
+  return h+':'+m;
+}
+function initResFields(){
+  var dt=document.getElementById('rsDate'),tm=document.getElementById('rsTime');
+  var today=resToday(); dt.min=today;
+  function sync(){
+    if(!tm)return;
+    tm.min=(dt.value===today)?resMinTime():'';
+  }
+  dt.addEventListener('change',sync);
+  sync();
+}
+initResFields();
+document.getElementById('resForm').addEventListener('submit',async function(e){
+  e.preventDefault();
+  var msg=document.getElementById('rsMsg');
+  if(!currentUser){
+    msg.textContent='Please login or sign up first to book a table — accounts let you track your bookings.';
+    msg.style.color='#e07070';
+    pendingReserve=true;
+    openAuth('login');
+    return;
+  }
+  pendingReserve=false;
+  try{
+    var r=await fetch('/api/reservations',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        name:document.getElementById('rsName').value,
+        phone:document.getElementById('rsPhone').value,
+        guests:document.getElementById('rsGuests').value,
+        date:document.getElementById('rsDate').value,
+        time:document.getElementById('rsTime').value
+      })});
+    var j=await r.json();
+    if(r.status===401){
+      currentUser=null; landAuthButtons();
+      msg.textContent='Your session expired — please login or sign up again to book.';
+      msg.style.color='#e07070';
+      openAuth('login');
+      return;
+    }
+    if(j.ok||j.id){
+      msg.textContent='Table reserved for '+document.getElementById('rsGuests').value+'! We look forward to seeing you. ☕';
+      msg.style.color='var(--gl)'; this.reset();
+    }else{
+      msg.textContent=j.error||'Something went wrong. Please try again.';
+      msg.style.color='#e07070';
+    }
+  }catch(err){ msg.textContent='Something went wrong. Please try again.'; msg.style.color='#e07070'; }
+});
+/* Load the latest menu straight from the database — admin changes appear here instantly */
+/* Social links + WhatsApp (single source of truth: SOCIAL in i18n.js) */
+(function(){
+  var wa=document.getElementById('waBtn');
+  if(wa){ wa.href=WA_LINK; if(WA_LINK==='#')wa.style.display='none'; }
+  document.querySelectorAll('[data-social]').forEach(function(a){
+    var u=(window.SOCIAL_URL||function(k){return (window.SOCIAL||{})[k]||'';})(a.getAttribute('data-social'));
+    if(u)a.href=u;
+  });
+})();
+document.getElementById('resForm').addEventListener('submit',async function(e){
+  e.preventDefault();
+  var msg=document.getElementById('rsMsg');
+  try{
+    var r=await fetch('/api/reservations',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        name:document.getElementById('rsName').value,
+        phone:document.getElementById('rsPhone').value,
+        guests:document.getElementById('rsGuests').value,
+        date:document.getElementById('rsDate').value,
+        time:document.getElementById('rsTime').value
+      })});
+    var j=await r.json();
+    if(j.ok){
+      msg.textContent='Table reserved! We look forward to seeing you. ☕';
+      msg.style.color='var(--gl)'; this.reset();
+    }else{ msg.textContent=j.error||'Something went wrong. Please try again.'; msg.style.color='#e07070'; }
+  }catch(err){ msg.textContent='Something went wrong. Please try again.'; msg.style.color='#e07070'; }
+});
+var lastMenuSig='';
+var lastMapAddr='';
+function applyImages(im){
+  if(!im)return;
+  var map={hero:'#hero .bg',about:'#about .img',quote:'#exp .bg',visit:'#visit .img'};
+  for(var k in map){ if(im[k]){ var el=document.querySelector(map[k]); if(el) el.style.backgroundImage="url('"+im[k]+"')"; } }
+}
+function applySettings(d){
+  if(d.settings.phone)document.getElementById('lPhone').textContent=d.settings.phone;
+  if(d.settings.name)document.getElementById('fName').textContent=d.settings.name;
+  applyImages(d.images);
+  if(d.settings.address){
+    if(d.settings.address!==lastMapAddr){
+      lastMapAddr=d.settings.address;
+      var mf=document.getElementById('mapFrame');
+      if(mf)mf.src='https://www.google.com/maps?q='+encodeURIComponent(d.settings.address)+'&output=embed';
+      var ma=document.getElementById('mAddr');
+      if(ma)ma.textContent=d.settings.address;
+    }
+  }
+  document.getElementById('fYr').textContent=new Date().getFullYear();
+}
+async function loadMenu(){
+  try{
+    var r=await fetch('/api/init');var d=await r.json();
+    if(d.me){ currentUser=d.me; } else if(!currentUser){ /* stays logged out */ }
+    landAuthButtons();
+    applySettings(d);
+    if(d.settings&&d.settings.toggles)I18N.setAvailableFromToggles(d.settings.toggles);
+    var sym={USD:'$',RWF:'RF',EUR:'€'}[d.settings.currency]||'$';
+    var list=d.products.slice().sort(function(a,b){return (b.feat?1:0)-(a.feat?1:0);}).slice(0,3);
+    var sig=JSON.stringify(list.map(function(p){return [p.id,p.name,p.price,p.img,p.feat];}))+sym;
+    if(sig===lastMenuSig)return;
+    lastMenuSig=sig;
+    if(!list.length)return;
+    document.getElementById('menuGrid').innerHTML=list.map(function(p){
+      var bg=p.img
+        ? '<div class="bg" style="background-image:url(\''+p.img+'\')"></div>'
+        : '<div class="bg" style="background:linear-gradient(135deg,#2c1200,#1a0a00)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:3rem">'+(p.emoji||'☕')+'</span></div>';
+      return '<div class="card reveal"><div style="position:absolute;inset:0;overflow:hidden">'+bg+'</div><div class="info"><p class="tag">'+(p.cat||'Menu')+'</p><h3>'+p.name+'</h3><p class="price">'+sym+Number(p.price).toFixed(2)+'</p></div></div>';
+    }).join('');
+    reveal();
+  }catch(e){}
+}
+loadMenu();
+setInterval(loadMenu,30000);
+</script>
+</body>
+</html>

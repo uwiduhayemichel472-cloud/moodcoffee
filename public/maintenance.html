@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOOD Coffee — Something good is brewing</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--esp:#160804;--dk:#2a1105;--latte:#c8956c;--cream:#f5e6d3;--foam:#fdf6ee;--gold:#d4a060;--gl:#e8c080}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:'Jost',sans-serif;background:var(--esp);color:var(--cream);overflow:hidden}
+.bg{position:fixed;inset:0;background:url('https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=1920&q=80&auto=format&fit=crop') center/cover;transform:scale(1.06);animation:slow 22s ease-out forwards}
+.bg::after{content:'';position:absolute;inset:0;background:linear-gradient(160deg,rgba(12,4,0,.82),rgba(30,12,0,.55) 50%,rgba(12,4,0,.88))}
+@keyframes slow{to{transform:scale(1)}}
+.wrap{position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 24px}
+.logo{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:300;letter-spacing:.1em;color:var(--gl);position:absolute;top:34px;left:50%;transform:translateX(-50%);text-decoration:none}
+.logo em{font-style:italic;color:var(--latte)}
+.steam{font-size:3rem;opacity:.9;animation:bob 3.4s ease-in-out infinite;margin-bottom:26px}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.eyebrow{font-size:.66rem;letter-spacing:.42em;text-transform:uppercase;color:var(--gold);margin-bottom:26px;display:flex;align-items:center;gap:16px}
+.eyebrow::before,.eyebrow::after{content:'';width:46px;height:1px;background:rgba(212,160,96,.5)}
+h1{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:clamp(2.4rem,7vw,5.4rem);line-height:1.02;color:var(--foam);margin-bottom:22px}
+h1 em{font-style:italic;color:var(--gl);display:block}
+p{font-weight:200;letter-spacing:.04em;color:rgba(245,230,211,.75);max-width:520px;line-height:2;margin-bottom:10px}
+.note{font-size:.78rem;color:rgba(245,230,211,.4);margin-bottom:38px}
+.acts{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-bottom:44px}
+.btn{display:inline-block;font-size:.7rem;letter-spacing:.22em;text-transform:uppercase;padding:15px 40px;text-decoration:none;transition:all .25s;cursor:pointer}
+.btn.gold{background:var(--gold);color:var(--esp);font-weight:500}
+.btn.gold:hover{background:var(--gl)}
+.btn.ghost{background:transparent;color:var(--cream);border:1px solid rgba(245,230,211,.35)}
+.btn.ghost:hover{border-color:var(--gold);color:var(--gold)}
+.social{display:flex;gap:14px}
+.social a{width:42px;height:42px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(212,160,96,.28);border-radius:50%;color:var(--cream);text-decoration:none;font-size:.85rem;opacity:.8;transition:all .2s}
+.social a:hover{opacity:1;border-color:var(--gold);color:var(--gl);transform:translateY(-3px)}
+.status{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:9px;font-size:.62rem;letter-spacing:.26em;text-transform:uppercase;color:rgba(245,230,211,.4)}
+.status i{width:8px;height:8px;border-radius:50%;background:#6fcf97;animation:blink 1.6s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+@media(max-width:560px){.eyebrow::before,.eyebrow::after{width:20px}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="wrap">
+  <a class="logo" href="/">MOOD<em>.</em></a>
+  <div class="steam">☕</div>
+  <div class="eyebrow">Temporarily closed for upgrades</div>
+  <h1>Something good is <em>brewing…</em></h1>
+  <p>We're perfecting your favourite coffee experience. New roasts, fresh bakes and a faster order — all coming soon.</p>
+  <p class="note">Our team is working on it. Thank you for your patience.</p>
+  <div class="acts">
+    <a class="btn gold" href="/">Back to Home</a>
+    <a class="btn ghost" href="mailto:uwiduhayemichael@gmail.com">Contact Us</a>
+  </div>
+  <div class="social" data-social-links></div>
+  <div class="status"><i></i>Maintenance in progress</div>
+</div>
+<script src="i18n.js"></script>
+<script>
+var SU = window.SOCIAL_URL || (function (k) { return (window.SOCIAL || {})[k] || ''; });
+var links = { instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', whatsapp: 'WhatsApp' };
+document.querySelector('[data-social-links]').innerHTML = Object.keys(links).map(function (k) {
+  var url = SU(k);
+  return '<a href="' + (url || '#') + '" target="_blank" rel="noopener" aria-label="' + links[k] + '">' + links[k][0] + '</a>';
+}).join('');
+</script>
+</body>
+</html>
