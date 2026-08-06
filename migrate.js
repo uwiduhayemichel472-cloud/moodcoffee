@@ -69,6 +69,7 @@ async function main() {
   await addCol(conn, 'orders', 'gift_code VARCHAR(24) DEFAULT NULL');
   await addCol(conn, 'orders', 'gift_amount DECIMAL(8,2) DEFAULT 0');
   await addCol(conn, 'orders', 'tx_id VARCHAR(64) DEFAULT NULL');
+  await addCol(conn, 'orders', 'charge_id VARCHAR(64) DEFAULT NULL');
   await addCol(conn, 'settings', 'points_value DECIMAL(8,4) DEFAULT 0.0100');
   await addCol(conn, 'settings', 'smtp_json VARCHAR(2000) DEFAULT NULL');
   await addCol(conn, 'settings', 'max_review_len INT DEFAULT 300');

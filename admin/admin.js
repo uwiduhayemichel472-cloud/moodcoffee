@@ -1,6 +1,7 @@
 /* MOOD Admin — plain vanilla, no frameworks */
 const $ = id => document.getElementById(id);
 let admin = null, panel = 'overview';
+let S = { settings: {} };
 let catsCache = [], confirmCb = null;
 let lockMs = 5 * 60000, lastAct = Date.now();
 const ALL_PERMS = [
@@ -13,7 +14,7 @@ const can = p => !!admin && (admin.isSuper || (admin.perms || []).includes(p));
 const permLabel = p => (ALL_PERMS.find(x => x[0] === p) || [p, p])[1];
 
 const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const money = v => '$' + Number(v || 0).toFixed(2);
+const money = v => (S.settings && S.settings.currency === 'RWF' ? 'RWF ' : '$') + Number(v || 0).toFixed(S.settings && S.settings.currency === 'RWF' ? 0 : 2);
 const dt = s => { const d = new Date(s); return isNaN(d) ? '' : d.toLocaleString('en',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); };
 const qs = o => new URLSearchParams(o || {}).toString();
 
@@ -43,6 +44,7 @@ async function boot() {
   try {
     const m = await api('/api/admin/me');
     admin = m.admin; enterApp();
+    api('/api/admin/settings').then(s => { S.settings = s; }).catch(() => {});
   } catch (e) {
     const s = await api('/api/admin/status');
     renderAuth(s.setup ? 'setup' : 'login');
@@ -392,6 +394,7 @@ function delPromo(id) {
 /* ---------------- Settings ---------------- */
 async function loadSettings() {
   const s = await api('/api/admin/settings');
+  S.settings = s;
   const t = s.toggles || {};
   const tgl = (k, label) => `<div class="setrow"><span>${esc(label)}</span><label class="tgl"><input type="checkbox" ${t[k] ? 'checked' : ''} onchange="setTgl('${k}',this.checked)"><i></i></label></div>`;
   return `

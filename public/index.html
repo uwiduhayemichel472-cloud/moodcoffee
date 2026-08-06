@@ -618,7 +618,8 @@ async function loadMenu(){
     landAuthButtons();
     applySettings(d);
     if(d.settings&&d.settings.toggles)I18N.setAvailableFromToggles(d.settings.toggles);
-    var sym={USD:'$',RWF:'RF',EUR:'€'}[d.settings.currency]||'$';
+    var sym={USD:'$',RWF:'RWF ',EUR:'€'}[d.settings.currency]||'$';
+    var dec=(d.settings.currency==='RWF')?0:2;
     var list=d.products.slice().sort(function(a,b){return (b.feat?1:0)-(a.feat?1:0);}).slice(0,3);
     var sig=JSON.stringify(list.map(function(p){return [p.id,p.name,p.price,p.img,p.feat];}))+sym;
     if(sig===lastMenuSig)return;
@@ -628,7 +629,7 @@ async function loadMenu(){
       var bg=p.img
         ? '<div class="bg" style="background-image:url(\''+p.img+'\')"></div>'
         : '<div class="bg" style="background:linear-gradient(135deg,#2c1200,#1a0a00)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:3rem">'+(p.emoji||'☕')+'</span></div>';
-      return '<div class="card reveal"><div style="position:absolute;inset:0;overflow:hidden">'+bg+'</div><div class="info"><p class="tag">'+(p.cat||'Menu')+'</p><h3>'+p.name+'</h3><p class="price">'+sym+Number(p.price).toFixed(2)+'</p></div></div>';
+      return '<div class="card reveal"><div style="position:absolute;inset:0;overflow:hidden">'+bg+'</div><div class="info"><p class="tag">'+(p.cat||'Menu')+'</p><h3>'+p.name+'</h3><p class="price">'+sym+Number(p.price).toFixed(dec)+'</p></div></div>';
     }).join('');
     reveal();
   }catch(e){}

@@ -61,9 +61,20 @@
           <div class="srow" id="ptsRow" style="display:none"><span>Loyalty points</span><span id="sumPts"></span></div>
           <div class="srow tot"><span data-i18n="shop_total">Total</span><span id="sumTotal"></span></div>
           <button class="buy-btn" id="placeBtn" onclick="placeOrder()" data-i18n="shop_placed">Place Order & Pay</button>
-          <p class="note" data-i18n="co_secure">Secure demo checkout — no real payment is processed.</p>
+          <p class="note" id="payNote"></p>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section id="payingView" style="display:none">
+    <div class="wrap ok">
+      <div class="cup">📱</div>
+      <h2 data-i18n="pay_title">Payment Pending</h2>
+      <p data-i18n="pay_instruction">Confirm the payment on your phone to finish your order.</p>
+      <p class="payref">Order <b id="payRef"></b></p>
+      <p id="payStatus"></p>
+      <button class="buy-btn" onclick="openService()" data-i18n="shop_order_more">Order More</button>
     </div>
   </section>
 

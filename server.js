@@ -9,8 +9,13 @@ const mailer = require('./mailer.js');
 const pay = require('./payment.js');
 
 const app = express();
-app.use(express.json({ limit: '4mb' }));
-app.use(H.csrf); // block cross-origin writes
+// Keep the raw body so the Flutterwave webhook signature (HMAC over the raw
+// payload) can be verified.
+app.use(express.json({ limit: '4mb', verify: (req, res, buf) => { req.rawBody = buf; } }));
+app.use((req, res, next) => {
+  if (req.path === '/api/pay/webhook') return next(); // Flutterwave servers have no Origin
+  return H.csrf(req, res, next); // block cross-origin writes
+});
 
 // ─── Maintenance mode: when ON, the whole customer site shows the
 // maintenance page (admin panel + API stay fully working) ───────────
@@ -91,6 +96,10 @@ app.get('/api/init', async (req, res) => {
     let me = null;
     const s = await H.getSession(req, 'customer');
     if (s) { const u = await q('SELECT id,name,email,phone,points,created_at FROM customers WHERE id=?', [s.id]); if (u.length) me = u[0]; }
+    // Tell the storefront whether online payments are wired up and give it the
+    // key it needs to encrypt card details before they leave the browser.
+    settings.onlinePay = pay.configured();
+    settings.flwEncKey = settings.onlinePay ? cfg.gateway.flutterwave.encryptionKey : '';
     res.json({
       settings,
       categories: cats.map(c => ({ id: c.id, name: c.name, img: c.image, service: c.service || 'coffee' })),
@@ -273,16 +282,22 @@ app.post('/api/orders', H.requireCustomer, async (req, res) => {
     const payAmount = isRWF ? Math.max(100, Math.round(total)) : Math.round(total * 100) / 100;
 
     // ── Real payments (Flutterwave) ──
-    // Create the hosted payment page first, then hold the order as
-    // 'Pending' until Flutterwave confirms the money arrived. Gift card
-    // / loyalty points are only applied at that confirmation moment.
+    // Create the charge first, then hold the order as 'Pending' until
+    // Flutterwave confirms the money arrived. Gift card / loyalty points are
+    // only applied at that confirmation moment.
     if (useGateway) {
-      let link;
+      const gateMethod = ['card', 'airtel', 'mtn'].includes(payment) ? payment : 'mtn';
+      const payPhone = String(req.body.payPhone || '').trim() || phone.trim();
+      if ((gateMethod === 'mtn' || gateMethod === 'airtel') && !payPhone)
+        return res.status(400).json({ error: 'Enter a phone number for mobile money.' });
+      if (currency !== 'RWF' && (gateMethod === 'mtn' || gateMethod === 'airtel'))
+        return res.status(400).json({ error: 'Mobile money needs the store currency set to RWF (Admin → Settings).' });
+      let result;
       try {
-        link = await pay.createPaymentLink({
+        result = await pay.createPaymentLink({
           amount: payAmount, currency,
           tx_ref: ref,
-          customer: { email: req.user.email, name: req.user.name, phone: phone.trim(), method: payment },
+          customer: { email: req.user.email, name: req.user.name, phone: payPhone, method: gateMethod, card: req.body.card },
           description: items.map(i => i.name + ' ×' + i.qty).join(', ').slice(0, 180)
         });
       } catch (e) {
@@ -293,17 +308,22 @@ app.post('/api/orders', H.requireCustomer, async (req, res) => {
         await conn.beginTransaction();
         const [o] = await conn.execute(
           `INSERT INTO orders (ref,user_id,customer_name,phone,address,notes,subtotal,discount,total,payment,status,
-            points_earned,points_used,gift_code,gift_amount)
-           VALUES (?,?,?,?,?,?,?,?,?,?,'Pending',?,?,?,?)`,
+            points_earned,points_used,gift_code,gift_amount,charge_id)
+           VALUES (?,?,?,?,?,?,?,?,?,?,'Pending',?,?,?,?,?)`,
           [ref, req.user.id, req.user.name, phone.trim(), address.trim(), notes || '', subtotal, discount, total, payment,
-            pointsEarned, pointsUsed, giftCode || null, giftAmount]);
+            pointsEarned, pointsUsed, giftCode || null, giftAmount, result.chargeId || null]);
         for (const it of items)
           await conn.execute('INSERT INTO order_items (order_id,product_id,name,price,qty,emoji) VALUES (?,?,?,?,?,?)',
             [o.insertId, it.id, it.name, it.price, it.qty, it.emoji]);
         await conn.commit();
         conn.release();
       } catch (e) { conn.rollback(); conn.release(); throw e; }
-      return res.json({ need_payment: true, payment_link: link, ref, total, currency });
+      return res.json({
+        need_payment: true,
+        payment_link: result.url || '',
+        instruction: result.instruction || '',
+        ref, total, currency
+      });
     }
 
     // ── Demo / manual mode (no gateway keys yet): accept directly ──
@@ -342,17 +362,20 @@ async function confirmPaidOrder(ref, txId) {
   if (!rows.length) return false;
   const o = rows[0];
   if (o.status !== 'Pending') return o.status === 'Preparing';
+  const chargeId = String(txId || '') || String(o.charge_id || '');
+  if (!chargeId) return false;
   let tx;
-  try { tx = await pay.verifyTransaction(txId); } catch (e) { return false; }
-  if (!tx || tx.status !== 'successful') return false;
+  try { tx = await pay.verifyTransaction(chargeId); } catch (e) { return false; }
+  if (!tx || tx.status !== 'succeeded') return false;
   const st = await loadSettings();
   const currency = st.currency || 'USD';
   if (String(tx.currency).toUpperCase() !== String(currency).toUpperCase()) return false;
   if (Math.round(Number(tx.amount) * 100) < Math.round(Number(o.total) * 100)) return false;
+  if (tx.reference && String(tx.reference) !== String(ref)) return false;
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    await conn.execute("UPDATE orders SET status='Preparing', tx_id=? WHERE id=?", [String(tx.id || txId), o.id]);
+    await conn.execute("UPDATE orders SET status='Preparing', tx_id=? WHERE id=?", [String(tx.id || chargeId), o.id]);
     const pUsed = Number(o.points_used) || 0, pEarn = Number(o.points_earned) || 0;
     if (pUsed || pEarn)
       await conn.execute('UPDATE customers SET points = points - ? + ? WHERE id=?', [pUsed, pEarn, o.user_id]);
@@ -384,6 +407,15 @@ async function confirmPaidOrder(ref, txId) {
   return true;
 }
 
+// Payment return URL — after the customer pays, Flutterwave redirects here.
+// The charge id was saved when the order was created, so we can verify it.
+app.get('/api/pay/return', async (req, res) => {
+  const ref = String(req.query.ref || '');
+  const ok = ref ? await confirmPaidOrder(ref) : false;
+  res.redirect('/shop' + (ok ? '?paid=' + encodeURIComponent(ref) : '?payfail=1'));
+});
+
+// Kept for safety: lets a caller confirm with an explicit charge id too.
 app.get('/api/pay/verify', async (req, res) => {
   const ref = String(req.query.ref || '');
   const txId = String(req.query.transaction_id || req.query.tx_ref || '');
@@ -391,16 +423,33 @@ app.get('/api/pay/verify', async (req, res) => {
   res.redirect('/shop' + (ok ? '?paid=' + encodeURIComponent(ref) : '?payfail=1'));
 });
 
+// Live status poll for orders that don't redirect (e.g. mobile-money push).
+app.get('/api/pay/status', async (req, res) => {
+  try {
+    const ref = String(req.query.ref || '');
+    const rows = await q('SELECT status FROM orders WHERE ref=?', [ref]);
+    const status = rows.length ? rows[0].status : 'unknown';
+    res.json({ ok: status === 'Preparing', paid: status === 'Preparing', status, ref });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Flutterwave webhook: confirms the order even if the customer closes the
-// browser after paying. Protected by the verif-hash header when configured.
+// browser after paying. Protected by the flutterwave-signature HMAC (set a
+// secret hash in Flutterwave → Settings → Webhooks).
 app.post('/api/pay/webhook', async (req, res) => {
   try {
-    const hdr = String(req.headers['verif-hash'] || '');
-    if (cfg.gateway.flutterwave.webhookSecret && hdr !== cfg.gateway.flutterwave.webhookSecret)
-      return res.status(401).json({ error: 'Invalid webhook hash.' });
-    const d = (req.body && req.body.data) || {};
-    if (d.status === 'successful' && d.tx_ref)
-      await confirmPaidOrder(String(d.tx_ref), String(d.id || ''));
+    const sig = String(req.headers['flutterwave-signature'] || '');
+    const secret = cfg.gateway.flutterwave.webhookSecret;
+    if (secret) {
+      const raw = Buffer.isBuffer(req.rawBody) ? req.rawBody.toString() : String(req.rawBody || '');
+      const expected = crypto.createHmac('sha256', secret).update(raw).digest('base64');
+      if (!sig || sig !== expected)
+        return res.status(401).json({ error: 'Invalid webhook signature.' });
+    }
+    const body = req.body || {};
+    const d = body.data || {};
+    if (body.type === 'charge.completed' && d.status === 'succeeded' && d.reference)
+      await confirmPaidOrder(String(d.reference), String(d.id || ''));
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

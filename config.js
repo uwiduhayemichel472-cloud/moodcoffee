@@ -31,16 +31,22 @@ module.exports = {
     pass: process.env.SMTP_PASS || '',
     from: process.env.SMTP_FROM || '' // "from" address shown to recipients
   },
-  // Online payments via Flutterwave (MTN MoMo, Airtel Money, cards).
-  // Test keys end in _TEST and work immediately; live keys need a
-  // verified merchant account. Set them as environment variables so the
-  // secrets are never written in code or in the database.
+  // Online payments via Flutterwave v4 (MTN MoMo, Airtel Money, cards).
+  // v4 uses OAuth2: get Client ID + Client Secret (+ Encryption Key for
+  // cards) from Flutterwave dashboard → Settings → API. Set them as
+  // environment variables so the secrets are never in code or the DB.
   gateway: {
     flutterwave: {
-      secret: process.env.FLW_SECRET_KEY || '',
-      public: process.env.FLW_PUBLIC_KEY || '',
-      // Webhook secret used to verify payment callbacks (Flutterwave dashboard).
+      clientId: process.env.FLW_CLIENT_ID || '',
+      clientSecret: process.env.FLW_CLIENT_SECRET || '',
+      // AES-256 key used in the browser to encrypt card details before they
+      // leave the customer's device (shown in the dashboard next to the keys).
+      encryptionKey: process.env.FLW_ENCRYPTION_KEY || '',
+      // Webhook secret hash — set it in Flutterwave → Settings → Webhooks and
+      // paste the same value here. Used to verify payment callbacks.
       webhookSecret: process.env.FLW_WEBHOOK_SECRET || '',
+      // 'test' = Flutterwave sandbox (no real money). 'live' = real payments.
+      env: process.env.FLW_ENV || 'test',
       // Public base URL of the site (used to build the return URL after
       // payment). Example: https://moodcoffee.rw
       baseUrl: process.env.BASE_URL || 'http://localhost:3000'

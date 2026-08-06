@@ -1,10 +1,9 @@
 /* MOOD Coffee Shop & Bakery — storefront */
 const $ = s => document.querySelector(s);
 const money = n => { const c = (S.settings && S.settings.currency) || 'USD'; return (c === 'RWF' ? 'RWF ' : '$') + Number(n || 0).toFixed(c === 'RWF' ? 0 : 2); };
-const S = { cart: JSON.parse(localStorage.getItem('mood_cart') || '[]'), user: null, settings: {}, products: [], categories: [], cat: 'All', pay: 'paypal', promo: null, service: null, points: 0, gift: null };
+const S = { cart: JSON.parse(localStorage.getItem('mood_cart') || '[]'), user: null, settings: {}, products: [], categories: [], cat: 'All', pay: 'mtn', promo: null, service: null, points: 0, gift: null };
 
 const PAY = {
-  paypal: { name: 'PayPal', tag: 'Secure checkout', bg: '#003087' },
   mtn: { name: 'MTN MoMo', tag: 'Rwanda & East Africa', bg: '#FFCC00', fg: '#000' },
   airtel: { name: 'Airtel Money', tag: 'Fast mobile payment', bg: '#E40000', fg: '#fff' },
   card: { name: 'Bank Card', tag: 'Visa / Mastercard', bg: '#1A1F71', fg: '#fff' }
@@ -132,7 +131,7 @@ function renderNav() {
 }
 
 function go(v) {
-  ['menu', 'checkout', 'orders', 'success'].forEach(x => $('#' + x + 'View').style.display = x === v ? 'block' : 'none');
+  ['menu', 'checkout', 'orders', 'success', 'paying'].forEach(x => $('#' + x + 'View').style.display = x === v ? 'block' : 'none');
   if (v === 'menu') {
     if (!S.service) openService();
     renderMenu();
@@ -342,13 +341,13 @@ function renderCheckout() {
   if (!S.cart.length) { go('menu'); return; }
   if (!S.user) { toast(T('shop_please_login')); auth('login'); return; }
   S.promo = null;
-  const PAYMAP = { paypal: 'pp', mtn: 'mtn', airtel: 'airtel', card: 'card' };
-  const keys = Object.keys(PAY).filter(k => S.settings.toggles[PAYMAP[k]] !== false);
+  const keys = Object.keys(PAY).filter(k => S.settings.toggles[k] !== false);
   if (!keys.length) { toast(T('shop_payments_paused')); go('menu'); return; }
   if (keys.indexOf(S.pay) === -1) S.pay = keys[0];
   $('#payOpts').innerHTML = keys.map(k =>
     '<div class="po' + (S.pay === k ? ' sel' : '') + '" data-k="' + k + '" onclick="pickPay(\'' + k + '\')"><div class="pl" style="background:' + PAY[k].bg + ';color:' + (PAY[k].fg || '#fff') + ';display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:.56rem;font-weight:700;letter-spacing:.06em">' + PAY[k].name.toUpperCase() + '</div><div><b>' + PAY[k].name + '</b><span>' + PAY[k].tag + '</span></div></div>').join('');
   $('#payField').innerHTML = '';
+  $('#payNote').textContent = S.settings.onlinePay ? T('co_secure') : T('co_demo_note');
   S.points = 0; S.gift = null;
   renderLoyalty(); renderGiftField();
   renderTotals();
@@ -356,7 +355,27 @@ function renderCheckout() {
 function pickPay(k) { S.pay = k; document.querySelectorAll('.po').forEach(p => p.classList.toggle('sel', p.getAttribute('data-k') === k)); renderPayField(); }
 function renderPayField() {
   const m = S.pay, el = $('#payField');
-  if (m === 'paypal' || m === 'card' || m === 'mtn' || m === 'airtel') el.innerHTML = '<p style="font-size:.8rem;font-weight:200;color:rgba(245,230,211,.55)">' + T('co_gateway_note') + '</p>';
+  if (m === 'card') {
+    el.innerHTML =
+      '<label><span>Name on card</span><input id="pcName" autocomplete="cc-name" placeholder="YOUR NAME"></label>' +
+      '<label><span>Card number</span><input id="pcNum" inputmode="numeric" autocomplete="cc-number" placeholder="0000 0000 0000 0000"></label>' +
+      '<div class="row2"><label><span>Expiry (MM/YY)</span><input id="pcExp" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/YY"></label>' +
+      '<label><span>CVV</span><input id="pcCvv" inputmode="numeric" autocomplete="cc-csc" placeholder="123"></label></div>' +
+      '<p class="pmnote">' + T('co_card_secure') + '</p>';
+    cardFormat();
+  } else if (m === 'mtn' || m === 'airtel') {
+    el.innerHTML =
+      '<label><span>' + (m === 'mtn' ? 'MTN MoMo number' : 'Airtel Money number') + '</span>' +
+      '<input id="pcMoMo" inputmode="tel" placeholder="+250 7XX XXX XXX" value="' + esc($('#coPhone').value) + '"></label>' +
+      '<p class="pmnote">' + T('co_momo_note') + '</p>';
+  } else {
+    el.innerHTML = '';
+  }
+}
+function cardFormat() {
+  const num = $('#pcNum'), exp = $('#pcExp');
+  if (num) num.addEventListener('input', () => { num.value = num.value.replace(/[^\d]/g, '').replace(/(.{4})/g, '$1 ').trim().slice(0, 19); });
+  if (exp) exp.addEventListener('input', () => { const v = exp.value.replace(/[^\d]/g, ''); exp.value = v.length > 2 ? v.slice(0, 2) + '/' + v.slice(2, 4) : v; });
 }
 function renderLoyalty() {
   const el = $('#loyField');
@@ -418,10 +437,15 @@ async function placeOrder() {
   const phone = $('#coPhone').value.trim(), addr = $('#coAddr').value.trim();
   if (!phone || !addr) { toast(T('shop_enter_phone')); return; }
   const btn = $('#placeBtn'); btn.disabled = true; btn.textContent = T('shop_processing');
+  let card = null;
+  try {
+    if (S.pay === 'card') card = await cardPayload();
+  } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = T('shop_placed'); return; }
+  const momoPhone = (S.pay === 'mtn' || S.pay === 'airtel') && $('#pcMoMo') ? $('#pcMoMo').value.trim() : '';
   try {
     const j = await api('/api/orders', { method: 'POST', body: JSON.stringify({
       cart: S.cart, phone, address: addr, notes: $('#coNotes').value, payment: S.pay, promo: S.promo ? S.promo.code : '',
-      points: S.points || 0, gift: S.gift ? S.gift.code : ''
+      points: S.points || 0, gift: S.gift ? S.gift.code : '', payPhone: momoPhone, card
     }) });
     if (j.need_payment && j.payment_link) {
       S.pendingPay = j.ref;
@@ -429,6 +453,7 @@ async function placeOrder() {
       window.location.href = j.payment_link;
       return;
     }
+    if (j.need_payment && j.instruction) { showPaying(j.ref); return; }
     S.cart = []; saveCart(); $('#cartCount').textContent = 0;
     S.user.points = (Number(S.user.points) || 0) - S.points + (Number(j.pointsEarned) || 0);
     S.gift = null; S.points = 0;
@@ -436,6 +461,60 @@ async function placeOrder() {
       (j.pointsEarned ? '<br>You earned <b style="color:var(--gold)">' + j.pointsEarned + ' loyalty points</b>!' : '');
     go('success');
   } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = T('shop_placed'); }
+}
+
+// ─── Card encryption (Flutterwave v4 AesGcm) ───
+function randNonce(len) {
+  const c = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let s = '';
+  for (let i = 0; i < len; i++) s += c[Math.floor(Math.random() * c.length)];
+  return s;
+}
+async function encryptField(keyB64, nonce, data) {
+  const raw = Uint8Array.from(atob(keyB64), c => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt']);
+  const enc = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: new TextEncoder().encode(nonce) }, key, new TextEncoder().encode(data));
+  return btoa(String.fromCharCode(...new Uint8Array(enc)));
+}
+async function cardPayload() {
+  const num = $('#pcNum').value.replace(/[^\d]/g, '');
+  const exp = $('#pcExp').value.replace(/[^\d]/g, '');
+  const cvv = $('#pcCvv').value.replace(/[^\d]/g, '');
+  const mm = exp.slice(0, 2), yy = exp.slice(2, 4);
+  if (num.length < 15 || mm.length !== 2 || yy.length !== 2 || cvv.length < 3)
+    throw new Error(T('co_card_invalid'));
+  const key = S.settings.flwEncKey;
+  if (!key) throw new Error(T('co_card_unavailable'));
+  const nonce = randNonce(12);
+  return {
+    nonce,
+    encrypted_card_number: await encryptField(key, nonce, num),
+    encrypted_expiry_month: await encryptField(key, nonce, mm),
+    encrypted_expiry_year: await encryptField(key, nonce, yy),
+    encrypted_cvv: await encryptField(key, nonce, cvv)
+  };
+}
+
+// ─── "Check your phone" waiting screen (mobile-money push) ───
+let payPoll = null;
+function showPaying(ref) {
+  S.pendingPay = ref;
+  $('#payRef').textContent = ref;
+  $('#payStatus').textContent = T('pay_awaiting');
+  go('paying');
+  clearInterval(payPoll);
+  payPoll = setInterval(async () => {
+    try {
+      const j = await api('/api/pay/status?ref=' + encodeURIComponent(ref));
+      if (j.paid) {
+        clearInterval(payPoll);
+        S.cart = []; saveCart(); $('#cartCount').textContent = 0;
+        S.gift = null; S.points = 0;
+        $('#okMsg').innerHTML = T('shop_thanks') + ' <b style="color:var(--gold)">' + ref + '</b><br>' + T('shop_paid_confirm');
+        go('success');
+      }
+    } catch (e) {}
+  }, 4000);
 }
 
 // ─── Orders ───
