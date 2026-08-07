@@ -131,8 +131,11 @@ async function adminLive() {
 }
 
 /* ---------------- Navigation ---------------- */
+function adminNav() { document.querySelector('aside').classList.toggle('open'); $('burger').classList.toggle('open'); $('navOvl').classList.toggle('show'); }
+function adminNavClose() { document.querySelector('aside').classList.remove('open'); $('burger').classList.remove('open'); $('navOvl').classList.remove('show'); }
 document.querySelectorAll('.nl').forEach(b => b.addEventListener('click', () => switchPanel(b.dataset.p)));
 function switchPanel(p) {
+  adminNavClose();
   if (p === 'admins') { if (!admin || !admin.isSuper) p = 'overview'; }
   else if (!can(p)) p = 'overview';
   panel = p;

@@ -46,6 +46,7 @@
 
   <div class="main">
     <header>
+      <button class="burger" id="burger" onclick="adminNav()" aria-label="Menu"><span></span><span></span><span></span></button>
       <h1 id="title">Dashboard</h1>
       <div class="r">
         <input id="gSearch" placeholder="Search products, orders…" oninput="gSearch(this.value)">
@@ -55,6 +56,9 @@
     <main id="pan"></main>
   </div>
 </div>
+
+<!-- Mobile nav overlay -->
+<div class="nav-ovl" id="navOvl" onclick="adminNavClose()"></div>
 
 <!-- Product modal -->
 <div class="ovl" id="prodOvl" onclick="closeModal('prodOvl')"></div>

@@ -248,8 +248,8 @@ const I18N = (function () {
       ord_delivered: 'Delivered',
       ord_pending: 'Pending',
       ord_cancelled: 'Cancelled',
-      ord_empty_title: 'No orders yet',
-      ord_empty_sub: 'When you place your first order, it will show up here so you can follow it in real time.',
+      ord_empty_title: 'Your coffee ritual starts here',
+      ord_empty_sub: 'You haven\'t ordered any coffee or fresh bread from MOOD yet. Place your first order and it will appear here so you can follow it in real time.',
       ord_browse: 'Browse the menu',
       ord_login_title: 'Sign in to see your orders',
       ord_login_sub: 'Log in to follow your orders and reservations all in one place.'
@@ -477,8 +477,8 @@ const I18N = (function () {
       ord_delivered: 'Livré',
       ord_pending: 'En Attente',
       ord_cancelled: 'Annulé',
-      ord_empty_title: 'Aucune commande pour l\'instant',
-      ord_empty_sub: 'Dès que vous passerez votre première commande, elle apparaîtra ici pour que vous puissiez la suivre en temps réel.',
+      ord_empty_title: 'Votre rituel café commence ici',
+      ord_empty_sub: 'Vous n\'avez pas encore commandé de café ni de pain frais chez MOOD. Passez votre première commande et elle apparaîtra ici pour que vous puissiez la suivre en temps réel.',
       ord_browse: 'Voir le menu',
       ord_login_title: 'Connectez-vous pour voir vos commandes',
       ord_login_sub: 'Connectez-vous pour suivre vos commandes et réservations au même endroit.'
@@ -706,8 +706,8 @@ const I18N = (function () {
       ord_delivered: 'Byatanzwe',
       ord_pending: 'Biracyategerejwe',
       ord_cancelled: 'Byahagaritswe',
-      ord_empty_title: 'Nta byo watanze',
-      ord_empty_sub: 'Iyo uzatanze ikintu cya mbere, kizagaragara hano kugira ngo ukimenye igihe cyose.',
+      ord_empty_title: 'Urugendo rwawe rw\'ikawa rutangira hano',
+      ord_empty_sub: 'Nta kawa cyangwa umugati mushya wahisemo muri MOOD. Tanze itegeko ryawe rya mbere kandi rizagaragara hano kugira ngo urikurikirane igihe cyose.',
       ord_browse: 'Reba ifunguro',
       ord_login_title: 'Injira urebe ibyo watanze',
       ord_login_sub: 'Injira urebe ibyo watanze n\'amabwanisho mu mwanya umwe.'

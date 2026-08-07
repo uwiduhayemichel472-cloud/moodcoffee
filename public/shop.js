@@ -540,16 +540,17 @@ function showPaying(ref, instruction) {
 }
 
 // ─── Orders ───
+const EMPTY_IMG = '<div class="oe-media"><img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=500&q=70&auto=format&fit=crop" alt="Freshly brewed coffee"><img src="https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&q=70&auto=format&fit=crop" alt="Freshly baked bread"></div>';
 function renderOrdersFrom(orders) {
   const stMap = { 'Preparing': T('ord_processing'), 'Delivered': T('ord_delivered'), 'Pending': T('ord_pending'), 'Cancelled': T('ord_cancelled') };
   $('#ordersList').innerHTML = orders.length ? orders.map(o =>
     '<div class="oc"><div class="och"><div class="oid">' + o.id + ' · ' + new Date(o.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
     '</div><span class="ost st-' + o.status + '">' + (stMap[o.status] || o.status) + '</span></div><div>' + o.items.map(i => '<span class="ochip">' + i.emoji + ' ' + i.name + ' ×' + i.qty + '</span>').join('') +
     '</div><div class="otr"><span class="otl">' + o.payment.toUpperCase() + '</span><span class="otv">' + money(o.total) + '</span></div></div>').join('')
-    : '<div class="ocempty"><div class="oe-cup">☕</div><b>' + T('ord_empty_title') + '</b><p>' + T('ord_empty_sub') + '</p><button class="ab" onclick="go(\'menu\')">' + T('ord_browse') + '</button></div>';
+    : '<div class="ocempty">' + EMPTY_IMG + '<b>' + T('ord_empty_title') + '</b><p>' + T('ord_empty_sub') + '</p><button class="ab" onclick="go(\'menu\')">' + T('ord_browse') + '</button></div>';
 }
 async function renderOrders() {
-  if (!S.user) { $('#ordersList').innerHTML = '<div class="ocempty"><div class="oe-cup">🍩</div><b>' + T('ord_login_title') + '</b><p>' + T('ord_login_sub') + '</p><button class="ab" onclick="auth(\'login\')">' + T('nav_login') + '</button></div>'; return; }
+  if (!S.user) { $('#ordersList').innerHTML = '<div class="ocempty">' + EMPTY_IMG + '<b>' + T('ord_login_title') + '</b><p>' + T('ord_login_sub') + '</p><button class="ab" onclick="auth(\'login\')">' + T('nav_login') + '</button></div>'; return; }
   try {
     const d = await api('/api/my-orders');
     renderOrdersFrom(d.orders);
