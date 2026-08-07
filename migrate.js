@@ -72,6 +72,13 @@ async function main() {
     redeemed_at DATETIME DEFAULT NULL,
     FOREIGN KEY (user_id) REFERENCES customers(id) ON DELETE CASCADE
   ) ENGINE=InnoDB`);
+  await conn.query(`CREATE TABLE IF NOT EXISTS announcements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(120) NOT NULL DEFAULT '',
+    message VARCHAR(1000) NOT NULL,
+    status TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB`);
 
   console.log('Adding new columns (if missing)…');
   await addCol(conn, 'customers', 'points INT NOT NULL DEFAULT 0');

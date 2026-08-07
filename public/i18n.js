@@ -135,6 +135,12 @@ const I18N = (function () {
       trend_t2: 'Trending.',
       trend_sub: 'The most-loved coffee & bakery picks from the last 30 days.',
       trend_shop: 'Order Online',
+      ann_new: 'New announcement',
+      ann_got: 'Got it',
+      ann_prev: 'Previous',
+      ann_next: 'Next',
+      ann_of: 'of',
+      ann_close: 'Close',
 
       /* Footer */
       footer_explore: 'Explore',
@@ -402,6 +408,12 @@ const I18N = (function () {
       trend_t2: 'Semaine.',
       trend_sub: 'Les choix café & boulangerie les plus aimés des 30 derniers jours.',
       trend_shop: 'Commander en Ligne',
+      ann_new: 'Nouvelle annonce',
+      ann_got: 'Compris',
+      ann_prev: 'Précédent',
+      ann_next: 'Suivant',
+      ann_of: 'sur',
+      ann_close: 'Fermer',
 
       /* Footer */
       footer_explore: 'Explorer',
@@ -669,6 +681,12 @@ const I18N = (function () {
       trend_t2: 'Cyumweru.',
       trend_sub: 'Ibikunzwe cyane mu kawa n\'ibigori mu byumweru 30 bishize.',
       trend_shop: 'Tumiza Online',
+      ann_new: 'Itangazo rishya',
+      ann_got: 'Nabyumvise',
+      ann_prev: 'Ibirata',
+      ann_next: 'Ibikurikira',
+      ann_of: 'kuri',
+      ann_close: 'Funga',
 
       /* Footer */
       footer_explore: 'Shakisha',

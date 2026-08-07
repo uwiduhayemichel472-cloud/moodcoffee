@@ -74,7 +74,7 @@ r.get('/me', H.requireAdmin, (req, res) => res.json({ admin: req.admin }));
 // ---------- Protected routes below ----------
 r.use(H.requireAdmin);
 
-const ALL_PERMS = ['overview', 'products', 'categories', 'orders', 'customers', 'promos', 'settings', 'notifications', 'reports', 'reviews', 'reservations', 'giftcards'];
+const ALL_PERMS = ['overview', 'products', 'categories', 'orders', 'customers', 'promos', 'settings', 'notifications', 'announcements', 'reports', 'reviews', 'reservations', 'giftcards'];
 function perm(...keys) {
   return (req, res, next) => {
     if (req.admin.isSuper) return next();
@@ -385,6 +385,38 @@ r.post('/notifications/:id/read', perm('notifications'), async (req, res) => {
 });
 r.delete('/notifications', perm('notifications'), async (req, res) => {
   try { await q('DELETE FROM notifications'); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ---------- Announcements (broadcast to customers) ----------
+r.get('/announcements', perm('announcements'), async (req, res) => {
+  try { res.json({ announcements: await q('SELECT * FROM announcements ORDER BY created_at DESC, id DESC') }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+r.post('/announcements', perm('announcements'), async (req, res) => {
+  try {
+    const title = String(req.body.title || '').trim().slice(0, 120);
+    const message = String(req.body.message || '').trim().slice(0, 1000);
+    if (!message) return res.status(400).json({ error: 'Write the announcement message.' });
+    const rr = await q('INSERT INTO announcements (title,message,status) VALUES (?,?,1)', [title, message]);
+    H.notify('Announcement posted: ' + (title || 'Untitled'));
+    res.json({ ok: true, id: rr.insertId });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+r.patch('/announcements/:id', perm('announcements'), async (req, res) => {
+  try {
+    const upd = [], vals = [];
+    if (req.body.status !== undefined) { upd.push('status=?'); vals.push(req.body.status ? 1 : 0); }
+    if (req.body.title !== undefined) { upd.push('title=?'); vals.push(String(req.body.title).slice(0, 120)); }
+    if (req.body.message !== undefined) { upd.push('message=?'); vals.push(String(req.body.message).slice(0, 1000)); }
+    if (!upd.length) return res.status(400).json({ error: 'Nothing to update.' });
+    vals.push(Number(req.params.id));
+    await q(`UPDATE announcements SET ${upd.join(',')} WHERE id=?`, vals);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+r.delete('/announcements/:id', perm('announcements'), async (req, res) => {
+  try { await q('DELETE FROM announcements WHERE id=?', [Number(req.params.id)]); res.json({ ok: true }); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 

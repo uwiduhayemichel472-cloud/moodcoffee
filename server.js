@@ -710,6 +710,13 @@ app.get('/api/my-rewards', H.requireCustomer, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ─── Announcements (admin broadcasts to every visitor) ───
+app.get('/api/announcements', async (req, res) => {
+  try {
+    res.json({ announcements: await q('SELECT id,title,message,created_at FROM announcements WHERE status=1 ORDER BY created_at DESC, id DESC LIMIT 10') });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ─── Trending items: most-ordered coffee & bread from real orders ───
 app.get('/api/trending', async (req, res) => {
   try {

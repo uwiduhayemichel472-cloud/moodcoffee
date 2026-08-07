@@ -7,7 +7,7 @@ let lockMs = 5 * 60000, lastAct = Date.now();
 const ALL_PERMS = [
   ['overview', 'Dashboard'], ['products', 'Products'], ['categories', 'Categories'], ['orders', 'Orders'],
   ['customers', 'Customers'], ['promos', 'Promo Codes'], ['settings', 'Settings'],
-  ['notifications', 'Notifications'], ['reports', 'Reports'],
+  ['notifications', 'Notifications'], ['announcements', 'Announcements'], ['reports', 'Reports'],
   ['reviews', 'Reviews'], ['reservations', 'Reservations'], ['giftcards', 'Gift Cards']
 ];
 const can = p => !!admin && (admin.isSuper || (admin.perms || []).includes(p));
@@ -140,8 +140,8 @@ function switchPanel(p) {
   else if (!can(p)) p = 'overview';
   panel = p;
   document.querySelectorAll('.nl').forEach(b => b.classList.toggle('active', b.dataset.p === p));
-  $('title').textContent = { overview: 'Dashboard', products: 'Products', categories: 'Categories', orders: 'Orders', customers: 'Customers', promos: 'Promo Codes', settings: 'Settings', images: 'Site Images', notifications: 'Notifications', reports: 'Reports', reviews: 'Reviews', reservations: 'Reservations', giftcards: 'Gift Cards', admins: 'Team & Admins' }[p] || 'Dashboard';
-  const L = { overview: loadOverview, products: loadProducts, categories: loadCategories, orders: loadOrders, customers: loadCustomers, promos: loadPromos, settings: loadSettings, images: loadImages, notifications: loadNotifs, reports: loadReports, reviews: loadReviews, reservations: loadReservations, giftcards: loadGiftcards, admins: loadAdmins };
+  $('title').textContent = { overview: 'Dashboard', products: 'Products', categories: 'Categories', orders: 'Orders', customers: 'Customers', promos: 'Promo Codes', settings: 'Settings', images: 'Site Images', notifications: 'Notifications', announcements: 'Announcements', reports: 'Reports', reviews: 'Reviews', reservations: 'Reservations', giftcards: 'Gift Cards', admins: 'Team & Admins' }[p] || 'Dashboard';
+  const L = { overview: loadOverview, products: loadProducts, categories: loadCategories, orders: loadOrders, customers: loadCustomers, promos: loadPromos, settings: loadSettings, images: loadImages, notifications: loadNotifs, announcements: loadAnnouncements, reports: loadReports, reviews: loadReviews, reservations: loadReservations, giftcards: loadGiftcards, admins: loadAdmins };
   $('pan').innerHTML = '<div class="card2"><div class="bd" style="color:#999">Loading…</div></div>';
   L[p]().then(h => $('pan').innerHTML = h).catch(e => $('pan').innerHTML = `<div class="card2"><div class="bd" style="color:#c0392b">${esc(e.message)}</div></div>`);
 }
@@ -617,6 +617,52 @@ async function loadNotifs() {
 async function readNotif(id, el) { try { await api('/api/admin/notifications/' + id + '/read', { method: 'POST', body: '{}' }); el.closest('.notif').style.opacity = .6; } catch (e) {} }
 async function clearNotifs() {
   confirm('Delete all notifications?', async () => { try { await api('/api/admin/notifications', { method: 'DELETE' }); loadNotifs().then(h => $('pan').innerHTML = h); } catch (e) { toast(e.message); } });
+}
+
+/* ---------------- Announcements ---------------- */
+async function loadAnnouncements() {
+  const d = await api('/api/admin/announcements');
+  const list = (d.announcements || []).map(a => `
+    <div class="card2" style="opacity:${a.status ? 1 : .55}">
+      <div class="hd"><b>${esc(a.title || 'Untitled announcement')}</b><span style="font-size:.74rem;color:#7a5c44;font-weight:400">${dt(a.created_at)}</span></div>
+      <div class="bd">
+        <p style="margin:0 0 14px;white-space:pre-line">${esc(a.message)}</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="a-btn" onclick="togAnn(${a.id},${a.status ? 0 : 1},this)">${a.status ? 'Hide from site' : 'Publish'}</button>
+          <button class="a-btn red" onclick="delAnn(${a.id})">Delete</button>
+        </div>
+      </div>
+    </div>`).join('');
+  return `
+  <div class="toolbar"><span style="font-size:.78rem;color:#7a5c44">What you post here appears on every page of the website via the red microphone button.</span></div>
+  <div class="card2"><div class="hd"><b>New announcement</b></div><div class="bd">
+    <div class="fg"><label>Title</label><input id="annTitle" maxlength="120" placeholder="e.g. New branch in Musanze!"></div>
+    <div class="fg"><label>Message</label><textarea id="annMsg" rows="3" maxlength="1000" placeholder="e.g. We are opening a brand new MOOD branch in Musanze this month — free coffee for the first 100 visitors!"></textarea></div>
+    <button class="gold" style="max-width:220px" onclick="saveAnn()">Post announcement</button>
+  </div></div>
+  <div class="kpis"><div class="kpi"><b>${(d.announcements || []).length}</b><span>Total posted</span></div><div class="kpi"><b>${(d.announcements || []).filter(x => x.status).length}</b><span>Live on site</span></div></div>
+  ${list || '<div class="card2"><div class="bd" style="color:#888">No announcements yet. Post your first one above — customers will see it immediately.</div></div>'}`;
+}
+async function saveAnn() {
+  const title = $('annTitle').value, msg = $('annMsg').value;
+  if (!msg.trim()) { toast('Write the announcement message first.'); return; }
+  try {
+    await api('/api/admin/announcements', { method: 'POST', body: JSON.stringify({ title, message: msg }) });
+    toast('Announcement is now live for all customers');
+    loadAnnouncements().then(h => $('pan').innerHTML = h);
+  } catch (e) { toast(e.message); }
+}
+async function togAnn(id, val, el) {
+  try {
+    await api('/api/admin/announcements/' + id, { method: 'PATCH', body: JSON.stringify({ status: val }) });
+    toast(val ? 'Announcement is now live' : 'Hidden from the site');
+    loadAnnouncements().then(h => $('pan').innerHTML = h);
+  } catch (e) { toast(e.message); }
+}
+async function delAnn(id) {
+  confirm('Delete this announcement? Customers will no longer see it.', async () => {
+    try { await api('/api/admin/announcements/' + id, { method: 'DELETE' }); loadAnnouncements().then(h => $('pan').innerHTML = h); } catch (e) { toast(e.message); }
+  });
 }
 
 /* ---------------- Reports ---------------- */

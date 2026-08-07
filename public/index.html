@@ -52,6 +52,7 @@ h1 em{font-style:italic;color:var(--gl);display:block}
 .g-btn{background:transparent;color:var(--cream);border:1px solid rgba(245,230,211,.3)}
 .g-btn:hover{border-color:var(--gold);color:var(--gold)}
 @keyframes up{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+@keyframes upc{from{opacity:0;transform:translate(-50%,calc(-50% + 26px))}to{opacity:1;transform:translate(-50%,-50%)}}
 .mq{background:var(--gold);padding:12px 0;overflow:hidden;white-space:nowrap}
 .mq span{font-size:.68rem;letter-spacing:.26em;text-transform:uppercase;color:var(--esp);font-weight:500;padding:0 24px}
 .mq .d{color:rgba(26,10,0,.38)}
@@ -132,7 +133,7 @@ form button:hover{background:var(--gl)}
 .auth-ovl{position:fixed;inset:0;background:rgba(5,2,0,.78);z-index:600;display:none}
 .auth-ovl.open{display:block}
 .auth-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:601;width:100%;max-width:400px;background:var(--dk);border:1px solid rgba(212,160,96,.22);border-radius:12px;padding:34px;display:none;box-shadow:0 24px 60px rgba(0,0,0,.45)}
-.auth-modal.open{display:block;animation:up .25s both}
+.auth-modal.open{display:block;animation:upc .25s both}
 .auth-modal .x{position:absolute;top:14px;right:18px;background:none;border:none;color:rgba(245,230,211,.4);font-size:1.5rem;cursor:pointer}
 .auth-modal .x:hover{color:var(--gold)}
 .auth-modal .mt{font-family:'Cormorant Garamond',serif;font-size:1.7rem;font-weight:300;color:var(--foam);margin-bottom:6px}
@@ -148,7 +149,7 @@ form button:hover{background:var(--gl)}
 .cf-ovl{position:fixed;inset:0;background:rgba(5,2,0,.78);z-index:650;display:none}
 .cf-ovl.open{display:block}
 .cf-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:651;width:100%;max-width:310px;background:var(--dk);border:1px solid rgba(212,160,96,.22);border-radius:12px;padding:30px 26px 24px;display:none;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.45)}
-.cf-modal.open{display:block;animation:up .25s both}
+.cf-modal.open{display:block;animation:upc .25s both}
 .cf-modal .cf-cup{font-size:1.9rem;margin-bottom:10px}
 .cf-modal .cf-hd{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:1.3rem;color:var(--foam)}
 .cf-modal .cf-msg{font-size:.78rem;font-weight:200;color:rgba(245,230,211,.6);line-height:1.7;margin:12px 0 22px}
@@ -467,6 +468,7 @@ footer li a:hover{color:var(--gl)}
 </a>
 
 <script src="i18n.js"></script>
+<script src="announce.js"></script>
 <script>
 var nav=document.getElementById('nav');
 addEventListener('scroll',function(){nav.classList.toggle('scrolled',scrollY>60);});
