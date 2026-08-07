@@ -13,6 +13,10 @@
   var esc = function (s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   };
+  var annWord = function () {
+    var lang = (window.I18N && I18N.current) ? I18N.current() : 'en';
+    return lang === 'fr' ? 'Annonce' : lang === 'rw' ? 'Itangazo' : 'Announcement';
+  };
 
   var css =
     '.mood-ann-btn{position:fixed;left:22px;bottom:22px;z-index:900;width:58px;height:58px;border-radius:50%;border:none;cursor:pointer;' +
@@ -129,11 +133,11 @@
   btn.title = t('ann_new');
   btn.innerHTML = '<span class="mood-ann-ring"></span>' + MIC + '<span class="mood-ann-dot"></span>' +
     '<span class="mood-ann-smoke">' +
-    '<span class="mood-ann-puff p1">' + esc(t('ann_word')) + '</span>' +
-    '<span class="mood-ann-puff p2">' + esc(t('ann_word')) + '</span>' +
-    '<span class="mood-ann-puff p3">' + esc(t('ann_word')) + '</span>' +
-    '<span class="mood-ann-puff p4">' + esc(t('ann_word')) + '</span>' +
-    '<span class="mood-ann-puff p5">' + esc(t('ann_word')) + '</span>' +
+    '<span class="mood-ann-puff p1">' + esc(annWord()) + '</span>' +
+    '<span class="mood-ann-puff p2">' + esc(annWord()) + '</span>' +
+    '<span class="mood-ann-puff p3">' + esc(annWord()) + '</span>' +
+    '<span class="mood-ann-puff p4">' + esc(annWord()) + '</span>' +
+    '<span class="mood-ann-puff p5">' + esc(annWord()) + '</span>' +
     '</span>';
   btn.addEventListener('click', function () { open(); render(); });
   document.body.appendChild(btn);
@@ -155,7 +159,7 @@
     .catch(function () {});
 
   window.addEventListener('i18n:changed', function () {
-    btn.querySelectorAll('.mood-ann-puff').forEach(function (p) { p.textContent = t('ann_word'); });
+    btn.querySelectorAll('.mood-ann-puff').forEach(function (p) { p.textContent = annWord(); });
     btn.setAttribute('aria-label', t('ann_new'));
     btn.title = t('ann_new');
     if (anns.length) render();
