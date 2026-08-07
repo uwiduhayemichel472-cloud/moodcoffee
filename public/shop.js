@@ -24,6 +24,20 @@ document.addEventListener('i18n:changed', applyLang);
 function saveCart() { localStorage.setItem('mood_cart', JSON.stringify(S.cart)); }
 function cartCount() { return S.cart.reduce((a, i) => a + i.qty, 0); }
 
+function shopNavToggle() {
+  const h = document.querySelector('header'), n = document.querySelector('header nav');
+  if (n) n.classList.toggle('open');
+  if (h) h.classList.toggle('open');
+}
+(function () {
+  const n = document.querySelector('header nav');
+  if (!n) return;
+  n.addEventListener('click', function (e) {
+    if (e.target.closest('a,button') && !e.target.closest('.lang-switch') && !e.target.closest('.lang-menu'))
+      shopNavToggle();
+  });
+})();
+
 async function api(url, opt) {
   const r = await fetch(url, Object.assign({ headers: { 'Content-Type': 'application/json' } }, opt));
   const j = await r.json().catch(() => ({}));
