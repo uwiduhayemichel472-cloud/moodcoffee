@@ -8,13 +8,13 @@
 
   var SEEN_KEY = 'mood_ann_seen';
   var t = function (k) {
-    try { return (window.I18N && I18N.t(k)) || k; } catch (e) { return k; }
+    try { return (typeof I18N !== 'undefined' && I18N.t) ? I18N.t(k) : k; } catch (e) { return k; }
   };
   var esc = function (s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   };
   var annWord = function () {
-    var lang = (window.I18N && I18N.current) ? I18N.current() : 'en';
+    var lang = (typeof I18N !== 'undefined' && I18N.current) ? I18N.current() : 'en';
     return lang === 'fr' ? 'Annonce' : lang === 'rw' ? 'Itangazo' : 'Announcement';
   };
 
@@ -158,7 +158,7 @@
     })
     .catch(function () {});
 
-  window.addEventListener('i18n:changed', function () {
+  document.addEventListener('i18n:changed', function () {
     btn.querySelectorAll('.mood-ann-puff').forEach(function (p) { p.textContent = annWord(); });
     btn.setAttribute('aria-label', t('ann_new'));
     btn.title = t('ann_new');
