@@ -1,7 +1,7 @@
 /* MOOD Coffee Shop & Bakery — storefront */
 const $ = s => document.querySelector(s);
 const money = n => { const c = (S.settings && S.settings.currency) || 'USD'; return (c === 'RWF' ? 'RWF ' : '$') + Number(n || 0).toFixed(c === 'RWF' ? 0 : 2); };
-const S = { cart: JSON.parse(localStorage.getItem('mood_cart') || '[]'), user: null, settings: {}, products: [], categories: [], cat: 'All', pay: 'mtn', promo: null, service: null, points: 0, gift: null };
+const S = { cart: JSON.parse(localStorage.getItem('mood_cart') || '[]'), user: null, settings: {}, products: [], categories: [], cat: 'All', pay: 'mtn', promo: null, service: null, points: 0, gift: null, orders: [] };
 
 const PAY = {
   mtn: { name: 'MTN MoMo', tag: 'Rwanda & East Africa', bg: '#FFCC00', fg: '#000' },
@@ -54,6 +54,15 @@ async function init() {
     if (S.settings.toggles.maint) { showMaintenance(); return; }
     I18N.setAvailableFromToggles(S.settings.toggles);
     renderSettings(); applyImages(d.images);
+    try {
+      const add = localStorage.getItem('mood_add');
+      if (add) {
+        localStorage.removeItem('mood_add');
+        const pid = JSON.parse(add).id;
+        const p = S.products.find(x => x.id === pid);
+        if (p && p.avail) addToCart(pid);
+      }
+    } catch (e) {}
   } catch (e) { toast('Could not reach server.'); }
   renderNav(); renderCats(); renderMenu();
   if (paidRef) {
@@ -300,18 +309,58 @@ function auth(m) {
 function closeAuth() { $('#authOvl').classList.remove('open'); $('#authBox').classList.remove('open'); }
 
 // ─── My Account ───
+function copyCode(txt) {
+  (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast(T('acc_copied')))
+    .catch(() => { const el = document.createElement('input'); el.value = txt; document.body.appendChild(el); el.select(); try { document.execCommand('copy'); toast(T('acc_copied')); } catch (e) {} document.body.removeChild(el); });
+}
+function loyaltyHtml() {
+  const on = S.settings.toggles.loyalty !== false;
+  const pv = Number(S.settings.pointsValue) || 0;
+  const thr = Math.max(1, Number(S.settings.loyaltyThreshold) || 100);
+  const pts = Number(S.user.points) || 0;
+  const pct = Math.min(100, Math.round((pts % thr) / thr * 100));
+  const worth = money(pts * pv);
+  return '<div class="ms">' + T('acc_loyalty') + '</div>' +
+    '<div class="loycard">' +
+    '<div class="loybar"><i style="width:' + pct + '%"></i></div>' +
+    '<div class="loycap"><b>' + pts + ' pts</b><span>' + T('acc_pts_worth') + ' ' + worth + '</span></div>' +
+    (on && pv > 0 ? '<p class="loynext">' + (thr - (pts % thr)) + ' ' + T('acc_next_reward') + '</p>' : '<p class="loynext">' + T('acc_rewards_off') + '</p>') +
+    '</div>';
+}
+function rewardsHtml(list) {
+  if (!list.length) return '<div class="accRow"><span>' + T('acc_rewards_none') + '</span><b>—</b></div>';
+  return list.map(r => '<div class="accRow rwrow"><span><b class="rwt">' + esc(r.title) + '</b><code>' + esc(r.code) + '</code></span>' +
+    (r.status ? '<b class="rw-val">' + money(r.value) + '</b><button class="rw-copy" onclick="copyCode(\'' + esc(r.code) + '\')">' + T('acc_copy') + '</button>' : '<b class="rw-used">' + T('acc_rewards_used') + '</b>') + '</div>').join('');
+}
+function giftcardsHtml(list) {
+  if (!list.length) return '<div class="accRow"><span>' + T('acc_gift_none') + '</span><b>—</b></div>';
+  return list.map(g => '<div class="accRow rwrow"><span><code>' + esc(g.code) + '</code></span><b class="rw-val">' + money(g.balance) + ' ' + T('acc_gift_left') + '</b><button class="rw-copy" onclick="copyCode(\'' + esc(g.code) + '\')">' + T('acc_copy') + '</button></div>').join('');
+}
+function toggleGiftForm() { const f = $('#gcBuyForm'); if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
+async function buyGift() {
+  const amt = Number($('#gcAmt').value);
+  const btn = $('#gcBuyBtn');
+  const msg = $('#gcBuyMsg');
+  if (!amt || amt < 1) { msg.textContent = T('acc_gift_invalid'); msg.className = 'gcerr'; return; }
+  btn.disabled = true;
+  try {
+    const j = await api('/api/giftcards', { method: 'POST', body: JSON.stringify({
+      amount: amt, recipientName: $('#gcRec').value, recipientEmail: $('#gcRecMail').value, message: $('#gcMsgTxt').value
+    }) });
+    msg.innerHTML = T('acc_gift_ok') + ' <code>' + esc(j.code) + '</code>' + (j.emailed ? ' · ' + T('acc_gift_emailed') : '');
+    msg.className = 'gcok';
+    $('#gcAmt').value = ''; $('#gcRec').value = ''; $('#gcRecMail').value = ''; $('#gcMsgTxt').value = '';
+    if (S.user) { try { const g = await api('/api/my-giftcards'); $('#gcList').innerHTML = giftcardsHtml(g.giftcards); } catch (e) {} }
+  } catch (e) { msg.textContent = e.message; msg.className = 'gcerr'; }
+  btn.disabled = false;
+}
 async function openAcc() {
   const u = S.user; if (!u) return;
   const joined = u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-  let gcHtml = '', resHtml = '';
-  try {
-    const gc = await api('/api/my-giftcards');
-    gcHtml = gc.giftcards.length ? gc.giftcards.map(g => '<div class="accRow"><span>' + g.code + '</span><b>' + money(g.balance) + ' left</b></div>').join('') : '<div class="accRow"><span>No gift cards yet</span><b>—</b></div>';
-  } catch (e) {}
-  try {
-    const rs = await api('/api/my-reservations');
-    resHtml = rs.reservations.length ? rs.reservations.map(x => '<div class="accRow"><span>' + String(x.res_date).slice(0, 10) + ' ' + x.res_time + '</span><b>' + x.guests + ' guests · ' + x.status + '</b></div>').join('') : '<div class="accRow"><span>No bookings yet</span><b>—</b></div>';
-  } catch (e) {}
+  let gcHtml = '<div class="accRow"><span>…</span><b>—</b></div>', resHtml = '', rwHtml = '';
+  try { const gc = await api('/api/my-giftcards'); gcHtml = giftcardsHtml(gc.giftcards); } catch (e) {}
+  try { const rs = await api('/api/my-reservations'); resHtml = rs.reservations.length ? rs.reservations.map(x => '<div class="accRow"><span>' + String(x.res_date).slice(0, 10) + ' ' + x.res_time + '</span><b>' + x.guests + ' guests · ' + x.status + '</b></div>').join('') : '<div class="accRow"><span>' + T('acc_res_none') + '</span><b>—</b></div>'; } catch (e) {}
+  try { const rw = await api('/api/my-rewards'); rwHtml = rewardsHtml(rw.rewards); } catch (e) {}
   $('#accContent').innerHTML =
     '<div class="mt">' + T('acc_title') + '</div>' +
     '<div class="ms">' + T('acc_profile') + ' ' + (S.settings.name || 'MOOD') + '</div>' +
@@ -319,9 +368,18 @@ async function openAcc() {
     '<div class="accRow"><span>' + T('acc_email') + '</span><b>' + u.email + '</b></div>' +
     '<div class="accRow"><span>' + T('acc_phone') + '</span><b>' + (u.phone || '—') + '</b></div>' +
     (joined ? '<div class="accRow"><span>' + T('acc_member') + '</span><b>' + joined + '</b></div>' : '') +
-    '<div class="accRow"><span>Loyalty points</span><b>' + (u.points || 0) + ' pts</b></div>' +
-    '<div class="ms">Gift cards</div>' + gcHtml +
-    '<div class="ms">Table reservations</div>' + resHtml +
+    loyaltyHtml() +
+    '<div class="ms">' + T('acc_rewards') + '</div>' + rwHtml +
+    '<div class="ms">' + T('acc_gift_title') + ' <b class="acc-giftbtn" onclick="toggleGiftForm()">+ ' + T('acc_buy_gift') + '</b></div>' +
+    '<div id="gcList">' + gcHtml + '</div>' +
+    '<div class="gcform" id="gcBuyForm" style="display:none">' +
+    '<label><span>' + T('acc_gift_amt') + '</span><input id="gcAmt" type="number" min="1" max="500" placeholder="10"></label>' +
+    '<label><span>' + T('acc_gift_to') + '</span><input id="gcRec" placeholder="Aline"></label>' +
+    '<label><span>' + T('acc_gift_mail') + '</span><input id="gcRecMail" type="email" placeholder="friend@example.com"></label>' +
+    '<label><span>' + T('acc_gift_msg') + '</span><input id="gcMsgTxt" placeholder="Enjoy your coffee! ☕"></label>' +
+    '<p id="gcBuyMsg"></p>' +
+    '<button class="auth-btn" id="gcBuyBtn" onclick="buyGift()">' + T('acc_gift_btn') + '</button></div>' +
+    '<div class="ms">' + T('acc_bookings') + '</div>' + resHtml +
     '<div class="accFoot"><button class="auth-btn" onclick="closeAcc();logout()">' + T('acc_logout') + '</button></div>';
   $('#accOvl').classList.add('open'); $('#accBox').classList.add('open');
 }
@@ -413,9 +471,9 @@ function loyChg(v) {
 function renderGiftField() {
   const el = $('#gcField');
   el.innerHTML = S.gift
-    ? '<div class="loy gapp"><div><b>' + S.gift.code + '</b><span>Balance ' + money(S.gift.balance) + '</span></div><b class="grem" onclick="removeGift()">Remove</b></div>'
-    : '<div class="loy"><div><b>Gift card</b><span>Enter a code to pay with gift balance.</span></div>' +
-      '<span class="gcrow"><input id="coGift" placeholder="MOOD-XXXX-XXXX"><button class="ab" onclick="applyGift()">Apply</button></span></div>';
+    ? '<div class="loy gapp"><div><b>' + S.gift.code + '</b><span>' + (S.gift.kind === 'reward' ? esc(S.gift.title || T('co_reward_label')) : T('acc_gift_left')) + ' ' + money(S.gift.balance) + '</span></div><b class="grem" onclick="removeGift()">' + T('shop_remove') + '</b></div>'
+    : '<div class="loy"><div><b>' + T('co_gift_label') + '</b><span>' + T('co_gift_hint') + '</span></div>' +
+      '<span class="gcrow"><input id="coGift" placeholder="MOOD-XXXX-XXXX"><button class="ab" onclick="applyGift()">' + T('co_apply') + '</button></span></div>';
 }
 async function applyGift() {
   const code = $('#coGift').value.trim(), msg = $('#gcMsg');
@@ -438,13 +496,13 @@ function renderTotals() {
   const gift = S.gift ? Math.min(Number(S.gift.balance), sub - disc) : 0;
   const pv = Number(S.settings.pointsValue) || 0;
   const ptsVal = Math.min(S.points * pv, Math.max(0, sub - disc - gift));
-  const fee = (S.settings.freeDelivery > 0 && sub >= S.settings.freeDelivery) ? 0 : (S.settings.deliveryFee || 0);
+  const fee = (S.settings.freeDelivery > 0 && sub >= S.settings.freeDelivery) ? 0 : Math.max(0, Number(S.settings.deliveryFee) || 0);
   $('#sumItems').innerHTML = S.cart.map(i => '<div class="srow"><span>' + i.name + ' ×' + i.qty + '</span><span>' + money(i.price * i.qty) + '</span></div>').join('');
   $('#sumFee').textContent = fee > 0 ? money(fee) : 'Free';
   $('#discRow').style.display = disc ? 'flex' : 'none';
   if (disc) $('#sumDisc').textContent = '-' + money(disc);
   $('#giftRow').style.display = gift ? 'flex' : 'none';
-  if (gift) $('#sumGift').textContent = '-' + money(gift);
+  if (gift) { $('#giftRowLabel').textContent = S.gift && S.gift.kind === 'reward' ? T('co_reward_label') : T('co_gift_label'); $('#sumGift').textContent = '-' + money(gift); }
   $('#ptsRow').style.display = ptsVal ? 'flex' : 'none';
   if (ptsVal) $('#sumPts').textContent = '-' + money(ptsVal);
   $('#sumTotal').textContent = money(Math.max(0, sub - disc - gift - ptsVal + fee));
@@ -474,7 +532,8 @@ async function placeOrder() {
     S.user.points = (Number(S.user.points) || 0) - S.points + (Number(j.pointsEarned) || 0);
     S.gift = null; S.points = 0;
     $('#okMsg').innerHTML = T('shop_thanks') + ' <b style="color:var(--gold)">' + j.ref + '</b> ' + T('shop_preparing') + '<br>' + T('shop_total_label') + ' ' + money(j.total) +
-      (j.pointsEarned ? '<br>You earned <b style="color:var(--gold)">' + j.pointsEarned + ' loyalty points</b>!' : '');
+      (j.pointsEarned ? '<br>You earned <b style="color:var(--gold)">' + j.pointsEarned + ' loyalty points</b>!' : '') +
+      (j.rewardsIssued && j.reward ? '<br>🎉 ' + esc(j.reward.title) + ' unlocked — code <b style="color:var(--gold)">' + esc(j.reward.code) + '</b>. Find it in your account.' : '');
     go('success');
   } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = T('shop_placed'); }
 }
@@ -528,6 +587,7 @@ function showPaying(ref, instruction) {
         clearInterval(payPoll);
         S.cart = []; saveCart(); $('#cartCount').textContent = 0;
         S.gift = null; S.points = 0;
+        try { const me = await api('/api/me'); S.user = me.user; } catch (e) {}
         $('#okMsg').innerHTML = T('shop_thanks') + ' <b style="color:var(--gold)">' + ref + '</b><br>' + T('shop_paid_confirm');
         go('success');
       } else if (j.failed) {
@@ -541,13 +601,44 @@ function showPaying(ref, instruction) {
 
 // ─── Orders ───
 const EMPTY_IMG = '<div class="oe-media"><img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=500&q=70&auto=format&fit=crop" alt="Freshly brewed coffee"><img src="https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&q=70&auto=format&fit=crop" alt="Freshly baked bread"></div>';
+function trackHtml(o) {
+  if (o.status === 'Cancelled') return '<div class="track track-x"><span class="tx">' + T('ord_cancelled') + '</span></div>';
+  const st = { 'Pending': 0, 'Preparing': 1, 'Delivered': 2 }[o.status];
+  const steps = [T('ord_step1'), T('ord_step2'), T('ord_step3')];
+  let h = '<div class="track' + (o.status === 'Pending' ? ' tr-pending' : '') + '">';
+  steps.forEach((s, i) => {
+    h += '<div class="ts' + (i <= st ? ' on' : '') + (i === st ? ' cur' : '') + '"><i>' + (i < st ? '✓' : (i === st && o.status !== 'Pending' && st > 0 ? '' : '')) + '</i><span>' + s + '</span></div>';
+    if (i < steps.length - 1) h += '<div class="tl' + (i < st ? ' on' : '') + '"></div>';
+  });
+  return h + '</div>';
+}
 function renderOrdersFrom(orders) {
+  S.orders = orders;
   const stMap = { 'Preparing': T('ord_processing'), 'Delivered': T('ord_delivered'), 'Pending': T('ord_pending'), 'Cancelled': T('ord_cancelled') };
   $('#ordersList').innerHTML = orders.length ? orders.map(o =>
     '<div class="oc"><div class="och"><div class="oid">' + o.id + ' · ' + new Date(o.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
-    '</div><span class="ost st-' + o.status + '">' + (stMap[o.status] || o.status) + '</span></div><div>' + o.items.map(i => '<span class="ochip">' + i.emoji + ' ' + i.name + ' ×' + i.qty + '</span>').join('') +
-    '</div><div class="otr"><span class="otl">' + o.payment.toUpperCase() + '</span><span class="otv">' + money(o.total) + '</span></div></div>').join('')
+    '</div><span class="ost st-' + o.status + '">' + (stMap[o.status] || o.status) + '</span></div>' +
+    trackHtml(o) +
+    '<div class="oitems">' + o.items.map(i => '<span class="ochip">' + i.emoji + ' ' + i.name + ' ×' + i.qty + '</span>').join('') + '</div>' +
+    '<div class="otr"><span class="otl">' + o.payment.toUpperCase() + '</span><span class="otv">' + money(o.total) + '</span>' +
+    (o.status !== 'Cancelled' && o.status !== 'Pending' ? '<button class="reorder" onclick="reorder(\'' + o.id + '\')">↻ ' + T('ord_reorder') + '</button>' : '') + '</div></div>').join('')
     : '<div class="ocempty">' + EMPTY_IMG + '<b>' + T('ord_empty_title') + '</b><p>' + T('ord_empty_sub') + '</p><button class="ab" onclick="go(\'menu\')">' + T('ord_browse') + '</button></div>';
+}
+function reorder(ref) {
+  const o = S.orders.find(x => x.id === ref);
+  if (!o || !S.user) { auth('login'); return; }
+  const now = [], missing = [];
+  o.items.forEach(it => {
+    const p = it.productId ? S.products.find(x => x.id === it.productId) : null;
+    if (!p || !p.avail) { missing.push(it.name); return; }
+    const ex = now.find(x => x.id === p.id);
+    if (ex) ex.qty += it.qty;
+    else now.push({ id: p.id, name: p.name, price: p.price, emoji: p.emoji, img: p.img || '', qty: it.qty });
+  });
+  if (!now.length) { toast(T('ord_reorder_unavail')); return; }
+  S.cart = now; saveCart(); $('#cartCount').textContent = cartCount();
+  toast(missing.length ? T('ord_reorder_skip') + ' ' + missing.slice(0, 2).join(', ') : T('ord_reorder_done'));
+  go('checkout');
 }
 async function renderOrders() {
   if (!S.user) { $('#ordersList').innerHTML = '<div class="ocempty">' + EMPTY_IMG + '<b>' + T('ord_login_title') + '</b><p>' + T('ord_login_sub') + '</p><button class="ab" onclick="auth(\'login\')">' + T('nav_login') + '</button></div>'; return; }

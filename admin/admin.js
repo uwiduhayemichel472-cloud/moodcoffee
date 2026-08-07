@@ -427,8 +427,9 @@ async function loadSettings() {
     <div class="card2"><div class="hd"><b>Loyalty points</b></div><div class="bd">
       ${tgl('loyalty', 'Enable loyalty points')}
       <div class="fg"><label>1 point = $<input id="sPtsVal" type="number" step="0.001" min="0" value="${s.pointsValue}"></label></div>
-      <p style="font-size:.74rem;color:#7a5c44;margin:-4px 0 12px">Customers earn 1 point per $1 spent, then redeem them at this rate at checkout.</p>
-      <button class="gold" style="max-width:200px" onclick="savePoints()">Save points value</button>
+      <div class="fg"><label>Points for a free reward<input id="sPtsThr" type="number" min="1" step="1" value="${s.loyaltyThreshold}"></label></div>
+      <p style="font-size:.74rem;color:#7a5c44;margin:-4px 0 12px">Customers earn 1 point per $1 spent. When their balance reaches this many points it is automatically turned into a free-reward code (coffee or pastry) they can redeem at checkout.</p>
+      <button class="gold" style="max-width:200px" onclick="savePoints()">Save loyalty settings</button>
     </div></div>
     <div class="card2"><div class="hd"><b>Languages</b></div><div class="bd">
       <p style="font-size:.74rem;color:#7a5c44;margin:-4px 0 12px">Choose which languages visitors can use on the website. Disabled languages are hidden from the language menu.</p>
@@ -481,8 +482,9 @@ async function saveLock() {
 async function savePoints() {
   try {
     const v = Number($('sPtsVal').value) || 0;
-    await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ pointsValue: v }) });
-    toast('Points value saved');
+    const thr = Math.max(1, Number($('sPtsThr').value) || 100);
+    await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ pointsValue: v, loyaltyThreshold: thr }) });
+    toast('Loyalty settings saved');
   } catch (e) { toast(e.message); }
 }
 async function changePw() {

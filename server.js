@@ -60,6 +60,7 @@ async function loadSettings() {
     address: s.address, currency: s.currency, freeDelivery: Number(s.free_delivery) || 0,
     deliveryFee: Number(s.delivery_fee) || 0, deliveryTime: s.delivery_time,
     deliveryZones: s.delivery_zones, toggles, pointsValue: Number(s.points_value) || 0,
+    loyaltyThreshold: Math.max(1, Number(s.loyalty_threshold) || 100),
     maxReviewLen: Math.max(20, Math.min(2000, Number(s.max_review_len) || 300)),
     smtp
   };
@@ -200,7 +201,7 @@ app.post('/api/promo', async (req, res) => {
 
 app.get('/api/my-orders', H.requireCustomer, async (req, res) => {
   try {
-    const rows = await q(`SELECT o.*, oi.name item_name, oi.price item_price, oi.qty item_qty, oi.emoji item_emoji
+    const rows = await q(`SELECT o.*, oi.product_id item_pid, oi.name item_name, oi.price item_price, oi.qty item_qty, oi.emoji item_emoji
       FROM orders o JOIN order_items oi ON oi.order_id=o.id WHERE o.user_id=? ORDER BY o.created_at DESC`, [req.user.id]);
     const map = new Map();
     rows.forEach(r => {
@@ -211,7 +212,7 @@ app.get('/api/my-orders', H.requireCustomer, async (req, res) => {
         giftCode: r.gift_code, giftAmount: Number(r.gift_amount) || 0,
         items: []
       });
-      map.get(r.id).items.push({ name: r.item_name, price: Number(r.item_price), qty: r.item_qty, emoji: r.item_emoji });
+      map.get(r.id).items.push({ productId: r.item_pid, name: r.item_name, price: Number(r.item_price), qty: r.item_qty, emoji: r.item_emoji });
     });
     res.json({ orders: [...map.values()] });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -253,13 +254,18 @@ app.post('/api/orders', H.requireCustomer, async (req, res) => {
     discount = Math.round(discount * 100) / 100;
     let total = Math.round((subtotal - discount) * 100) / 100;
 
-    // ── Gift card ──
-    let giftCode = String(gift || '').trim().toUpperCase(), giftAmount = 0, giftRow = null;
+    // ── Gift card / loyalty reward code ──
+    let giftCode = String(gift || '').trim().toUpperCase(), giftAmount = 0, giftRow = null, giftKind = '';
     if (giftCode) {
       const g = await q('SELECT * FROM giftcards WHERE code=? AND status=1', [giftCode]);
-      if (!g.length) return res.status(404).json({ error: 'That gift card code is not valid.' });
-      giftRow = g[0];
-      giftAmount = Math.round(Math.min(Number(g[0].balance), total) * 100) / 100;
+      if (g.length) { giftRow = g[0]; giftKind = 'gift'; }
+      else {
+        const rw = await q('SELECT * FROM rewards WHERE code=? AND status=1 AND user_id=?', [giftCode, req.user.id]);
+        if (rw.length) { giftRow = rw[0]; giftKind = 'reward'; }
+        else return res.status(404).json({ error: 'That gift card or reward code is not valid.' });
+      }
+      const gval = giftKind === 'reward' ? Number(giftRow.value) : Number(giftRow.balance);
+      giftAmount = Math.round(Math.min(gval, total) * 100) / 100;
       total = Math.round((total - giftAmount) * 100) / 100;
     }
 
@@ -278,7 +284,7 @@ app.post('/api/orders', H.requireCustomer, async (req, res) => {
     // Delivery fee — collected with the online payment too, so the amount the
     // gateway charges matches what the checkout shows the customer.
     const freeDel = Number(st.freeDelivery) || 0;
-    const delFee = (freeDel > 0 && subtotal >= freeDel) ? 0 : (Number(st.deliveryFee) || 0);
+    const delFee = (freeDel > 0 && subtotal >= freeDel) ? 0 : Math.max(0, Number(st.deliveryFee) || 0);
     total = Math.round((total + delFee) * 100) / 100;
 
     const ref = 'MD-' + Date.now().toString().slice(-6) + '-' + Math.floor(100 + Math.random() * 900);
@@ -335,6 +341,7 @@ app.post('/api/orders', H.requireCustomer, async (req, res) => {
 
     // ── Demo / manual mode (no gateway keys yet): accept directly ──
     const conn = await pool.getConnection();
+    let settled = null;
     try {
       await conn.beginTransaction();
       const [o] = await conn.execute(
@@ -346,9 +353,10 @@ app.post('/api/orders', H.requireCustomer, async (req, res) => {
       for (const it of items)
         await conn.execute('INSERT INTO order_items (order_id,product_id,name,price,qty,emoji) VALUES (?,?,?,?,?,?)',
           [o.insertId, it.id, it.name, it.price, it.qty, it.emoji]);
-      if (pointsUsed || pointsEarned)
-        await conn.execute('UPDATE customers SET points = points - ? + ? WHERE id=?', [pointsUsed, pointsEarned, req.user.id]);
-      if (giftRow) {
+      settled = await settleLoyalty(conn, req.user.id, pointsUsed, pointsEarned, st);
+      if (giftRow && giftKind === 'reward') {
+        await conn.execute("UPDATE rewards SET status=0, redeemed_at=NOW() WHERE id=?", [giftRow.id]);
+      } else if (giftRow) {
         const remain = Math.round((Number(giftRow.balance) - giftAmount) * 100) / 100;
         await conn.execute('UPDATE giftcards SET balance=?, status=? WHERE id=?', [remain, remain > 0 ? 1 : 0, giftRow.id]);
       }
@@ -357,7 +365,7 @@ app.post('/api/orders', H.requireCustomer, async (req, res) => {
     } catch (e) { conn.rollback(); conn.release(); throw e; }
 
     H.notify(`New order ${ref} from ${req.user.name} — ${money(total)}`);
-    res.json({ ref, total, status: 'Preparing', pointsEarned, giftUsed: giftAmount });
+    res.json({ ref, total, status: 'Preparing', pointsEarned, giftUsed: giftAmount, rewardsIssued: settled ? settled.issued : 0, reward: settled ? settled.first : null });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -367,6 +375,33 @@ app.post('/api/orders', H.requireCustomer, async (req, res) => {
 // lets the return-URL path wait a few seconds for the charge to settle
 // before giving up (the webhook path checks just once).
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// Apply the order's point change, then auto-convert completed point
+// milestones into free-reward codes (the loyalty stamp-card). Runs inside
+// the caller's transaction so it is atomic with the order itself.
+async function settleLoyalty(conn, userId, used, earned, st) {
+  const on = st.toggles.loyalty !== false;
+  const thr = Math.max(1, Number(st.loyaltyThreshold) || 100);
+  const pv = Number(st.pointsValue) || 0;
+  const [me] = await conn.execute('SELECT points FROM customers WHERE id=?', [userId]);
+  let bal = Number((me[0] && me[0].points) || 0) - (Number(used) || 0) + (Number(earned) || 0);
+  let issued = 0, first = null;
+  if (!on || pv <= 0) {
+    await conn.execute('UPDATE customers SET points=? WHERE id=?', [Math.max(0, bal), userId]);
+    return { issued, first };
+  }
+  const perReward = Math.round((thr * pv) * 100) / 100;
+  const titles = ['Free Coffee on MOOD ☕', 'Free Pastry on MOOD 🥐'];
+  while (bal >= thr) {
+    let code = 'FREE-' + Math.random().toString(36).slice(2, 6).toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+    const title = titles[issued % 2];
+    await conn.execute('INSERT INTO rewards (user_id,code,title,value) VALUES (?,?,?,?)', [userId, code, title, perReward]);
+    if (!first) first = { code, title };
+    bal -= thr; issued++;
+  }
+  await conn.execute('UPDATE customers SET points=? WHERE id=?', [Math.max(0, bal), userId]);
+  if (issued) H.notify('Loyalty reward x' + issued + ' issued to customer #' + userId);
+  return { issued, first };
+}
 async function confirmPaidOrder(ref, txId, maxTries = 1) {
   const rows = await q('SELECT * FROM orders WHERE ref=?', [ref]);
   if (!rows.length) return false;
@@ -391,13 +426,15 @@ async function confirmPaidOrder(ref, txId, maxTries = 1) {
     await conn.beginTransaction();
     await conn.execute("UPDATE orders SET status='Preparing', tx_id=? WHERE id=?", [String(tx.id || chargeId), o.id]);
     const pUsed = Number(o.points_used) || 0, pEarn = Number(o.points_earned) || 0;
-    if (pUsed || pEarn)
-      await conn.execute('UPDATE customers SET points = points - ? + ? WHERE id=?', [pUsed, pEarn, o.user_id]);
+    await settleLoyalty(conn, o.user_id, pUsed, pEarn, st);
     if (o.gift_code) {
       const g = await conn.execute('SELECT id,balance FROM giftcards WHERE code=?', [o.gift_code]);
       if (g[0][0]) {
         const remain = Math.round((Number(g[0][0].balance) - Number(o.gift_amount)) * 100) / 100;
         await conn.execute('UPDATE giftcards SET balance=?, status=? WHERE id=?', [remain, remain > 0 ? 1 : 0, g[0][0].id]);
+      } else {
+        const rw = await conn.execute('SELECT id FROM rewards WHERE code=? AND user_id=?', [o.gift_code, o.user_id]);
+        if (rw[0][0]) await conn.execute('UPDATE rewards SET status=0, redeemed_at=NOW() WHERE id=?', [rw[0][0].id]);
       }
     }
     await conn.commit();
@@ -597,9 +634,13 @@ app.post('/api/giftcards', H.requireCustomer, async (req, res) => {
   try {
     const amount = Number(req.body.amount);
     const buyerEmail = String(req.body.buyerEmail || req.user.email).slice(0, 120);
+    const recipientName = String(req.body.recipientName || '').trim().slice(0, 80);
+    const recipientEmail = String(req.body.recipientEmail || '').trim().slice(0, 120);
     const message = String(req.body.message || '').slice(0, 500);
     if (isNaN(amount) || amount < 1 || amount > 500)
       return res.status(400).json({ error: 'Gift card value must be between 1 and 500.' });
+    if (recipientEmail && !recipientEmail.includes('@'))
+      return res.status(400).json({ error: 'Enter a valid recipient email.' });
     if (!H.rateLimit(req.ip, 'gc', 5, 60000))
       return res.status(429).json({ error: 'Too many gift cards. Try again later.' });
     let code = gcCode();
@@ -608,7 +649,37 @@ app.post('/api/giftcards', H.requireCustomer, async (req, res) => {
     await q('INSERT INTO giftcards (code,amount,balance,buyer_name,buyer_email,message) VALUES (?,?,?,?,?,?)',
       [code, amount, amount, req.user.name, buyerEmail, message]);
     H.notify('Gift card purchased: ' + buyerEmail + ' — $' + amount);
-    res.json({ code, amount });
+
+    // ── Deliver the card: email the code straight to the recipient ──
+    let emailed = false;
+    const st = await loadSettings();
+    const to = recipientEmail || buyerEmail;
+    if (to && to.includes('@')) {
+      const cur = st.currency || 'USD';
+      const val = (cur === 'RWF' ? 'RWF ' : '$') + (cur === 'RWF' ? Math.round(amount) : amount.toFixed(2));
+      emailed = await mailer.sendMail(st.smtp, {
+        to,
+        subject: '🎁 A MOOD gift card for you!',
+        text: (recipientName ? 'Hi ' + recipientName + ',\n\n' : '') +
+          (req.user.name || 'A MOOD regular') + ' sent you a digital gift card worth ' + val + '.\n\n' +
+          'Your code: ' + code + '\n\n' +
+          (message ? 'Message: ' + message + '\n\n' : '') +
+          'Redeem it at checkout in the MOOD online shop: order coffee and fresh bread and enter the code when you pay.\n\n' +
+          'Enjoy your treat! ☕ — MOOD Coffee Shop & Bakery',
+        html: '<div style="font-family:Arial,sans-serif;color:#2a1206;max-width:560px">' +
+          '<div style="background:#1a0a00;border-radius:14px;padding:30px;color:#f5e6d3;text-align:center">' +
+          '<div style="font-size:2.2rem">☕🎁</div>' +
+          '<h2 style="margin:10px 0 4px;font-weight:400">You received a MOOD gift card!</h2>' +
+          '<p style="color:rgba(245,230,211,.65);margin:0 0 18px">worth ' + val + ' · from ' + (req.user.name || 'a MOOD regular') + '</p>' +
+          '<div style="background:rgba(212,160,96,.15);border:1px dashed #d4a060;border-radius:10px;padding:18px">' +
+          '<p style="margin:0 0 6px;font-size:12px;letter-spacing:.2em;color:#d4a060;text-transform:uppercase">Your code</p>' +
+          '<div style="font-size:1.5rem;letter-spacing:.14em;color:#e8c080;font-weight:600">' + code + '</div></div>' +
+          (message ? '<p style="color:rgba(245,230,211,.8);margin:18px 0 0;font-style:italic">“' + message + '”</p>' : '') +
+          '<p style="color:rgba(245,230,211,.55);margin:20px 0 0;font-size:13px">Redeem it at checkout in the MOOD online shop — coffee and fresh bread on us.</p>' +
+          '</div></div>'
+      });
+    }
+    res.json({ code, amount, emailed });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -622,8 +693,41 @@ app.post('/api/giftcard', async (req, res) => {
   try {
     const code = String(req.body.code || '').trim().toUpperCase();
     const g = await q('SELECT code,balance FROM giftcards WHERE code=? AND status=1', [code]);
-    if (!g.length) return res.status(404).json({ error: 'That gift card code is not valid.' });
-    res.json({ code: g[0].code, balance: Number(g[0].balance) });
+    if (g.length) return res.json({ code: g[0].code, balance: Number(g[0].balance), kind: 'gift' });
+    // Loyalty reward codes are tied to the account that earned them.
+    const s = await H.getSession(req, 'customer');
+    if (s) {
+      const rw = await q('SELECT code,title,value FROM rewards WHERE code=? AND status=1 AND user_id=?', [code, s.id]);
+      if (rw.length) return res.json({ code: rw[0].code, balance: Number(rw[0].value), kind: 'reward', title: rw[0].title });
+    }
+    return res.status(404).json({ error: 'That gift card or reward code is not valid.' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/my-rewards', H.requireCustomer, async (req, res) => {
+  try {
+    res.json({ rewards: await q('SELECT code,title,value,status,created_at,redeemed_at FROM rewards WHERE user_id=? ORDER BY created_at DESC LIMIT 20', [req.user.id]) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Trending items: most-ordered coffee & bread from real orders ───
+app.get('/api/trending', async (req, res) => {
+  try {
+    let rows = await q(`SELECT p.id,p.cat_id,p.name,p.description,p.price,p.emoji,p.image,c.name AS cat,p.featured,
+        SUM(oi.qty) AS sold
+      FROM order_items oi
+      JOIN orders o ON o.id=oi.order_id
+      JOIN products p ON p.id=oi.product_id
+      JOIN categories c ON c.id=p.cat_id
+      WHERE p.available=1 AND o.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+      GROUP BY p.id,p.cat_id,p.name,p.description,p.price,p.emoji,p.image,c.name,p.featured
+      ORDER BY sold DESC, p.id LIMIT 8`);
+    if (!rows.length) {
+      rows = await q(`SELECT p.id,p.cat_id,p.name,p.description,p.price,p.emoji,p.image,c.name AS cat,p.featured,0 AS sold
+        FROM products p JOIN categories c ON c.id=p.cat_id
+        WHERE p.available=1 ORDER BY p.featured DESC, p.id LIMIT 8`);
+    }
+    res.json({ trending: rows.map(p => ({ id: p.id, cat: p.cat, name: p.name, price: Number(p.price), emoji: p.emoji, img: p.image, sold: Number(p.sold) || 0 })) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

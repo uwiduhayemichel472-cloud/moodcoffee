@@ -183,6 +183,46 @@ label input:focus{border-color:var(--gold)}
 .otr{display:flex;justify-content:space-between;border-top:1px solid rgba(212,160,96,.08);padding-top:12px}
 .otl{font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(245,230,211,.4)}
 .otv{font-family:'Cormorant Garamond',serif;font-size:1.15rem;color:var(--gl)}
+.reorder{background:var(--gold);color:#2b1200;border:0;border-radius:6px;padding:8px 16px;font-size:.7rem;font-weight:600;letter-spacing:.06em;cursor:pointer;transition:.25s}
+.reorder:hover{background:var(--gl);color:var(--dk)}
+.track{display:flex;align-items:center;margin:6px 0 14px}
+.track-x{margin:6px 0 14px}
+.track-x .tx{font-size:.72rem;color:#e07070;letter-spacing:.1em;text-transform:uppercase}
+.ts{display:flex;flex-direction:column;align-items:center;gap:5px;flex:0 0 auto}
+.ts i{width:22px;height:22px;border-radius:50%;border:1px solid rgba(245,230,211,.18);background:var(--dk);color:transparent;font-size:.66rem;font-style:normal;display:flex;align-items:center;justify-content:center;transition:.3s}
+.ts span{font-size:.56rem;letter-spacing:.08em;text-transform:uppercase;color:rgba(245,230,211,.35);white-space:nowrap}
+.ts.on i{background:rgba(45,106,79,.35);border-color:#6fcf97;color:#6fcf97}
+.ts.on span{color:rgba(245,230,211,.7)}
+.ts.cur i{box-shadow:0 0 0 4px rgba(212,160,96,.18);border-color:var(--gold)}
+.tl{flex:1;height:2px;background:rgba(245,230,211,.12);margin:0 6px;min-width:14px}
+.tl.on{background:linear-gradient(90deg,#6fcf97,var(--gold))}
+.tr-pending .ts.cur i{animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(212,160,96,.3)}50%{box-shadow:0 0 0 6px rgba(212,160,96,0)}}
+.loycard{background:linear-gradient(150deg,rgba(212,160,96,.16),rgba(212,160,96,.03));border:1px solid rgba(212,160,96,.25);border-radius:12px;padding:16px;margin-bottom:18px}
+.loybar{height:8px;border-radius:5px;background:rgba(245,230,211,.1);overflow:hidden;margin-bottom:10px}
+.loybar i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--gold),#b8860b);transition:width .6s}
+.loycap{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.loycap b{color:var(--gold);font-weight:600;font-size:1rem}
+.loycap span{font-size:.7rem;font-weight:200;color:rgba(245,230,211,.55)}
+.loynext{font-size:.74rem;font-weight:200;color:rgba(245,230,211,.6);margin:8px 0 0}
+.rwrow{flex-wrap:wrap}
+.rwrow span{display:flex;flex-direction:column;gap:4px}
+.rwrow code{color:var(--gold);font-size:.8rem;letter-spacing:.06em;background:rgba(212,160,96,.08);border:1px dashed rgba(212,160,96,.3);padding:3px 8px;border-radius:5px}
+.rwt{color:var(--foam)!important;font-weight:400;font-size:.82rem!important;letter-spacing:.02em!important;text-transform:none!important}
+.rw-val{color:#6fcf97}
+.rw-used{color:rgba(245,230,211,.35)!important;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em}
+.rw-copy{background:transparent;border:1px solid rgba(212,160,96,.35);color:var(--gl);border-radius:6px;padding:6px 12px;font-size:.66rem;letter-spacing:.08em;cursor:pointer;transition:.25s}
+.rw-copy:hover{background:var(--gold);color:#2b1200;border-color:var(--gold)}
+.acc-giftbtn{color:var(--gl);cursor:pointer;font-size:.66rem;letter-spacing:.1em;font-weight:500;text-transform:uppercase;margin-left:8px;transition:.25s}
+.acc-giftbtn:hover{color:var(--gold)}
+.gcform{display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid rgba(212,160,96,.18);border-radius:10px;background:rgba(212,160,96,.04);margin-bottom:16px}
+.gcform label{display:flex;flex-direction:column;gap:5px}
+.gcform label span{font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(245,230,211,.5)}
+.gcform input{background:var(--dk);border:1px solid rgba(212,160,96,.25);border-radius:6px;color:var(--cream);padding:9px 11px;font-size:.85rem}
+.gcform input:focus{outline:none;border-color:var(--gold)}
+.gcok{color:#6fcf97;font-size:.76rem;margin:2px 0}
+.gcerr{color:#e07070;font-size:.76rem;margin:2px 0}
+.gcok code{color:var(--gold)}
 .toast{position:fixed;bottom:26px;right:26px;background:var(--dk);border:1px solid rgba(212,160,96,.3);color:var(--cream);padding:13px 20px;border-radius:6px;font-size:.82rem;z-index:600;display:none;box-shadow:0 8px 30px rgba(0,0,0,.4)}
 .toast.show{display:block;animation:up .3s both}
 #shopFoot{border-top:1px solid rgba(212,160,96,.12);background:var(--dk);padding:36px 40px 22px;margin-top:40px}

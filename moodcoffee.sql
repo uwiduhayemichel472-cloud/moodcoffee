@@ -8,6 +8,7 @@ USE moodcoffee;
 
 -- ---------- Admins (separate from customers) ----------
 DROP TABLE IF EXISTS reviews;
+DROP TABLE IF EXISTS rewards;
 DROP TABLE IF EXISTS giftcards;
 DROP TABLE IF EXISTS reservations;
 DROP TABLE IF EXISTS sessions;
@@ -161,6 +162,18 @@ CREATE TABLE giftcards (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+CREATE TABLE rewards (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  code VARCHAR(24) NOT NULL UNIQUE,
+  title VARCHAR(60) NOT NULL,
+  value DECIMAL(8,2) NOT NULL,
+  status TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  redeemed_at DATETIME DEFAULT NULL,
+  FOREIGN KEY (user_id) REFERENCES customers(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 CREATE TABLE sessions (
   token CHAR(64) PRIMARY KEY,
   user_type VARCHAR(10) NOT NULL,
@@ -187,6 +200,7 @@ CREATE TABLE settings (
   toggles VARCHAR(500) DEFAULT '{}',
   lock_minutes INT DEFAULT 5,
   points_value DECIMAL(8,4) DEFAULT 0.0100,
+  loyalty_threshold INT NOT NULL DEFAULT 100,
   smtp_json VARCHAR(2000) DEFAULT NULL,
   max_review_len INT DEFAULT 300
 ) ENGINE=InnoDB;

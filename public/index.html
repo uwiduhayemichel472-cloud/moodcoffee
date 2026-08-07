@@ -225,6 +225,25 @@ footer li a:hover{color:var(--gl)}
   footer .fgrid{flex-direction:column;gap:28px}
   .fbot{flex-direction:column;text-align:center;gap:6px}
 }
+/* ── Trending carousel ── */
+.tstrip{display:flex;gap:16px;overflow-x:auto;padding:8px 4px 22px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.tstrip::-webkit-scrollbar{height:6px}
+.tstrip::-webkit-scrollbar-thumb{background:rgba(212,160,96,.3);border-radius:3px}
+.tcard{flex:0 0 240px;scroll-snap-align:start;background:linear-gradient(160deg,#2c1200,#1a0a00);border:1px solid rgba(212,160,96,.18);border-radius:12px;overflow:hidden;text-decoration:none;transition:.3s}
+.tcard:hover{transform:translateY(-4px);border-color:rgba(212,160,96,.45)}
+.timg{position:relative;height:150px;background:linear-gradient(135deg,#2c1200,#1a0a00);overflow:hidden}
+.timg img{width:100%;height:100%;object-fit:cover;transition:.4s}
+.tcard:hover .timg img{transform:scale(1.07)}
+.timg span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:3rem}
+.tn{padding:14px 16px 4px}
+.tn b{display:block;font-family:'Cormorant Garamond',serif;font-size:1.15rem;font-weight:400;color:var(--foam);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tn .tc{font-size:.58rem;letter-spacing:.22em;text-transform:uppercase;color:rgba(212,160,96,.6)}
+.tp{display:flex;justify-content:space-between;align-items:baseline;padding:8px 16px 16px}
+.tp span{font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:var(--gl)}
+.tp em{font-style:normal;font-size:.62rem;letter-spacing:.1em;color:rgba(245,230,211,.35)}
+.trend-cta{text-align:center;margin-top:6px}
+.tbtn{display:inline-block;padding:13px 34px;border:1px solid rgba(212,160,96,.4);border-radius:6px;color:var(--foam);text-decoration:none;font-size:.66rem;letter-spacing:.22em;text-transform:uppercase;transition:.3s}
+.tbtn:hover{background:var(--gold);border-color:var(--gold);color:#2b1200}
 </style>
 </head>
 <body>
@@ -358,6 +377,18 @@ footer li a:hover{color:var(--gl)}
       <button type="submit">Reserve a Table</button>
     </form>
     <p id="rsMsg"></p>
+  </div>
+</section>
+
+<section id="trend">
+  <div class="wrap reveal">
+    <div class="sec-h">
+      <p class="lbl" data-i18n="trend_lbl">What's Hot</p>
+      <h2><span data-i18n="trend_t1">This Week's</span> <em data-i18n="trend_t2">Trending.</em></h2>
+      <p class="sub" data-i18n="trend_sub">The most-loved coffee &amp; bakery picks from the last 30 days.</p>
+    </div>
+    <div class="tstrip" id="trendStrip" aria-label="Trending items"></div>
+    <div class="trend-cta"><a class="tbtn" href="/shop" data-i18n="trend_shop">Order Online</a></div>
   </div>
 </section>
 
@@ -656,6 +687,7 @@ async function loadMenu(){
     if(d.settings&&d.settings.toggles)I18N.setAvailableFromToggles(d.settings.toggles);
     var sym={USD:'$',RWF:'RWF ',EUR:'€'}[d.settings.currency]||'$';
     var dec=(d.settings.currency==='RWF')?0:2;
+    window._curSym=sym;window._curDec=dec;
     var list=d.products.slice().sort(function(a,b){return (b.feat?1:0)-(a.feat?1:0);}).slice(0,3);
     var sig=JSON.stringify(list.map(function(p){return [p.id,p.name,p.price,p.img,p.feat];}))+sym;
     if(sig===lastMenuSig)return;
@@ -672,6 +704,37 @@ async function loadMenu(){
 }
 loadMenu();
 setInterval(loadMenu,30000);
+/* ─── Trending carousel ─── */
+var _tInt=null;
+function loadTrending(){
+  fetch('/api/trending').then(function(r){return r.json();}).then(function(j){
+    var strip=document.getElementById('trendStrip'); if(!strip)return;
+    var items=(j&&(j.trending||j.items))||[];
+    if(!items.length){ var sec=strip.closest('#trend'); if(sec)sec.style.display='none'; return; }
+    strip.innerHTML=items.map(function(p){
+      var nm=String(p.name||'').replace(/"/g,'&quot;');
+      return '<a class="tcard" href="/shop" onclick="storeTrend('+JSON.stringify({id:p.id})+');">'+
+        '<div class="timg">'+(p.img?'<img src="'+p.img+'" alt="'+nm+'" loading="lazy">':'<span>'+(p.emoji||'☕')+'</span>')+'</div>'+
+        '<div class="tn"><b>'+nm+'</b><span class="tc">'+(p.cat||'Menu')+'</span></div>'+
+        '<div class="tp"><span>'+(window._curSym||'$')+Number(p.price).toFixed(window._curDec!==undefined?window._curDec:2)+'</span><em>'+Number(p.sold||0)+' sold</em></div>'+
+        '</a>';
+    }).join('');
+    clearInterval(_tInt);
+    if(items.length>1&&strip.scrollWidth>strip.clientWidth){
+      _tInt=setInterval(function(){trendTick(strip);},3800);
+      strip.addEventListener('mouseenter',function(){clearInterval(_tInt);});
+      strip.addEventListener('mouseleave',function(){clearInterval(_tInt);_tInt=setInterval(function(){trendTick(strip);},3800);});
+      strip.addEventListener('touchstart',function(){clearInterval(_tInt);},{passive:true});
+    }
+  }).catch(function(){});
+}
+function trendTick(strip){
+  var step=(strip.children[0]&&strip.children[0].getBoundingClientRect().width)||220;
+  if(strip.scrollLeft+strip.clientWidth>=strip.scrollWidth-20)strip.scrollTo({left:0,behavior:'smooth'});
+  else strip.scrollBy({left:step+16,behavior:'smooth'});
+}
+function storeTrend(p){ try{ localStorage.setItem('mood_add',JSON.stringify(p)); }catch(e){} return true; }
+loadTrending();
 </script>
 </body>
 </html>

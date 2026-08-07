@@ -293,6 +293,7 @@ r.get('/settings', perm('settings'), async (req, res) => {
       deliveryTime: s.delivery_time, deliveryZones: s.delivery_zones, toggles,
       lockMinutes: Math.max(1, Number(s.lock_minutes) || 5),
       pointsValue: Number(s.points_value) || 0,
+      loyaltyThreshold: Math.max(1, Number(s.loyalty_threshold) || 100),
       maxReviewLen: Math.max(20, Math.min(2000, Number(s.max_review_len) || 300)),
       smtp, isSuper: req.admin.isSuper
     });
@@ -331,7 +332,7 @@ r.put('/settings', perm('settings'), async (req, res) => {
 
     await q(`UPDATE settings SET store_name=?,tagline=?,email=?,phone=?,address=?,currency=?,
       free_delivery=?,delivery_fee=?,delivery_time=?,delivery_zones=?,toggles=?,lock_minutes=?,points_value=?,
-      max_review_len=?,smtp_json=? WHERE id=1`,
+      loyalty_threshold=?,max_review_len=?,smtp_json=? WHERE id=1`,
       [
         String(b.name ?? s.store_name ?? '').slice(0, 120),
         String(b.tagline ?? s.tagline ?? '').slice(0, 200),
@@ -340,12 +341,13 @@ r.put('/settings', perm('settings'), async (req, res) => {
         String(b.address ?? s.address ?? '').slice(0, 255),
         String(b.currency ?? s.currency ?? 'USD').slice(0, 8),
         Number(b.freeDelivery ?? s.free_delivery ?? 0),
-        Number(b.deliveryFee ?? s.delivery_fee ?? 0),
+        Math.max(0, Number(b.deliveryFee ?? s.delivery_fee ?? 0)),
         String(b.deliveryTime ?? s.delivery_time ?? '').slice(0, 60),
         String(b.deliveryZones ?? s.delivery_zones ?? '').slice(0, 255),
         JSON.stringify(toggles),
         Math.max(1, Number(b.lockMinutes ?? s.lock_minutes ?? 5)),
         Math.max(0, Number(b.pointsValue ?? s.points_value ?? 0)),
+        Math.max(1, Number(b.loyaltyThreshold ?? s.loyalty_threshold ?? 100)),
         Math.max(20, Math.min(2000, Number(b.maxReviewLen ?? s.max_review_len ?? 300))),
         JSON.stringify(smtp)
       ]);

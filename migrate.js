@@ -61,6 +61,17 @@ async function main() {
     status TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   ) ENGINE=InnoDB`);
+  await conn.query(`CREATE TABLE IF NOT EXISTS rewards (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    code VARCHAR(24) NOT NULL UNIQUE,
+    title VARCHAR(60) NOT NULL,
+    value DECIMAL(8,2) NOT NULL,
+    status TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    redeemed_at DATETIME DEFAULT NULL,
+    FOREIGN KEY (user_id) REFERENCES customers(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB`);
 
   console.log('Adding new columns (if missing)…');
   await addCol(conn, 'customers', 'points INT NOT NULL DEFAULT 0');
@@ -71,6 +82,7 @@ async function main() {
   await addCol(conn, 'orders', 'tx_id VARCHAR(64) DEFAULT NULL');
   await addCol(conn, 'orders', 'charge_id VARCHAR(64) DEFAULT NULL');
   await addCol(conn, 'settings', 'points_value DECIMAL(8,4) DEFAULT 0.0100');
+  await addCol(conn, 'settings', 'loyalty_threshold INT NOT NULL DEFAULT 100');
   await addCol(conn, 'settings', 'smtp_json VARCHAR(2000) DEFAULT NULL');
   await addCol(conn, 'settings', 'max_review_len INT DEFAULT 300');
   await addCol(conn, 'sessions', "ip VARCHAR(45) DEFAULT ''");
