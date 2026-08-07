@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="cupG" x1="0" y1="28" x2="0" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e8c080"/>
+      <stop offset="1" stop-color="#c8956c"/>
+    </linearGradient>
+  </defs>
+  <rect x="2.5" y="2.5" width="59" height="59" rx="13" fill="#1a0a00"/>
+  <rect x="2.5" y="2.5" width="59" height="59" rx="13" fill="none" stroke="#d4a060" stroke-opacity=".55" stroke-width="2.2"/>
+  <g fill="none" stroke="#f5e6d3" stroke-width="2.4" stroke-linecap="round">
+    <path d="M24 28 C21.5 24.5 27 22.5 24 18 C22 15 26 13 24.5 10.5" stroke-opacity=".85"/>
+    <path d="M32 28 C29.5 24.5 35 22.5 32 18 C30 15 34 13 32.5 10.5" stroke-opacity=".55"/>
+    <path d="M40 28 C37.5 24.5 43 22.5 40 18 C38 15 42 13 40.5 10.5" stroke-opacity=".35"/>
+  </g>
+  <rect x="20" y="28" width="24" height="22" rx="5" fill="url(#cupG)"/>
+  <path d="M45 34 h3 a6 7 0 0 1 0 12 h-4" fill="none" stroke="url(#cupG)" stroke-width="4.5" stroke-linecap="round"/>
+  <ellipse cx="32" cy="54.5" rx="17" ry="3" fill="#c8956c"/>
+</svg>

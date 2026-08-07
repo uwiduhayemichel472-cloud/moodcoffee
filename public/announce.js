@@ -47,7 +47,23 @@
     '.mood-ann-ghost{background:transparent;color:rgba(245,230,211,.75);border:1px solid rgba(212,160,96,.35)}' +
     '.mood-ann-ghost:hover{background:rgba(212,160,96,.12)}' +
     '.mood-ann-x{position:absolute;top:14px;right:18px;background:none;border:none;color:rgba(245,230,211,.45);font-size:1.4rem;cursor:pointer}' +
-    '.mood-ann-x:hover{color:#d4a060}';
+    '.mood-ann-x:hover{color:#d4a060}' +
+    /* ---- floating "announcement" words rising like smoke ---- */
+    '.mood-ann-smoke{position:absolute;bottom:calc(100% + 2px);left:50%;width:150px;height:96px;margin-left:-75px;pointer-events:none;overflow:visible}' +
+    '.mood-ann-puff{position:absolute;left:50%;bottom:0;transform:translateX(-50%) scale(.5);font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:600;' +
+    'font-size:1rem;letter-spacing:.08em;color:#f5e6d3;white-space:nowrap;opacity:0;filter:blur(.5px);' +
+    'text-shadow:0 2px 16px rgba(232,192,128,.5),0 0 6px rgba(212,160,96,.25);animation:moodAnnPuff 5s ease-out infinite}' +
+    '.mood-ann-puff.p2{font-size:.78rem;animation-delay:.9s}' +
+    '.mood-ann-puff.p3{font-size:1.18rem;animation-delay:1.8s}' +
+    '.mood-ann-puff.p4{font-size:.72rem;animation-delay:2.7s}' +
+    '.mood-ann-puff.p5{font-size:.95rem;animation-delay:3.6s}' +
+    '@keyframes moodAnnPuff{0%{transform:translate(-50%,8px) scale(.5);opacity:0}' +
+    '10%{transform:translate(-50%,-1px) scale(.85);opacity:.95}' +
+    '30%{transform:translate(calc(-50% + 16px),-26px) scale(1.06);opacity:.68}' +
+    '55%{transform:translate(calc(-50% - 13px),-52px) scale(1.18);opacity:.34}' +
+    '80%{transform:translate(calc(-50% + 5px),-72px) scale(1.08);opacity:.12}' +
+    '100%{transform:translate(-50%,-88px) scale(1.3);opacity:0}}' +
+    '@media (prefers-reduced-motion:reduce){.mood-ann-puff,.mood-ann-ring{animation:none;opacity:0}}';
 
   var style = document.createElement('style');
   style.textContent = css;
@@ -111,7 +127,14 @@
   btn.style.display = 'none';
   btn.setAttribute('aria-label', t('ann_new'));
   btn.title = t('ann_new');
-  btn.innerHTML = '<span class="mood-ann-ring"></span>' + MIC + '<span class="mood-ann-dot"></span>';
+  btn.innerHTML = '<span class="mood-ann-ring"></span>' + MIC + '<span class="mood-ann-dot"></span>' +
+    '<span class="mood-ann-smoke">' +
+    '<span class="mood-ann-puff p1">' + esc(t('ann_word')) + '</span>' +
+    '<span class="mood-ann-puff p2">' + esc(t('ann_word')) + '</span>' +
+    '<span class="mood-ann-puff p3">' + esc(t('ann_word')) + '</span>' +
+    '<span class="mood-ann-puff p4">' + esc(t('ann_word')) + '</span>' +
+    '<span class="mood-ann-puff p5">' + esc(t('ann_word')) + '</span>' +
+    '</span>';
   btn.addEventListener('click', function () { open(); render(); });
   document.body.appendChild(btn);
 
@@ -132,6 +155,9 @@
     .catch(function () {});
 
   window.addEventListener('i18n:changed', function () {
+    btn.querySelectorAll('.mood-ann-puff').forEach(function (p) { p.textContent = t('ann_word'); });
+    btn.setAttribute('aria-label', t('ann_new'));
+    btn.title = t('ann_new');
     if (anns.length) render();
   });
 })();
