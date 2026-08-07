@@ -33,7 +33,7 @@ async function api(url, opt) {
 
 async function init() {
   const qp = new URLSearchParams(location.search);
-  const paidRef = qp.get('paid'), payFail = qp.get('payfail');
+  const paidRef = qp.get('paid'), payFail = qp.get('payfail'), pendingRef = qp.get('pending');
   try {
     const d = await api('/api/init');
     S.settings = d.settings; S.categories = d.categories; S.products = d.products; S.user = d.me;
@@ -46,6 +46,8 @@ async function init() {
     S.cart = []; saveCart(); $('#cartCount').textContent = 0; S.gift = null; S.points = 0;
     $('#okMsg').innerHTML = T('shop_thanks') + ' <b style="color:var(--gold)">' + paidRef + '</b><br>' + T('shop_paid_confirm');
     go('success');
+  } else if (pendingRef) {
+    showPaying(pendingRef);
   } else if (payFail) {
     toast(T('shop_pay_cancelled'));
   } else {
@@ -447,13 +449,13 @@ async function placeOrder() {
       cart: S.cart, phone, address: addr, notes: $('#coNotes').value, payment: S.pay, promo: S.promo ? S.promo.code : '',
       points: S.points || 0, gift: S.gift ? S.gift.code : '', payPhone: momoPhone, card
     }) });
-    if (j.need_payment && j.payment_link) {
+    if (j.need_payment) {
       S.pendingPay = j.ref;
       btn.disabled = false; btn.textContent = T('shop_placed');
-      window.location.href = j.payment_link;
+      if (j.payment_link) { window.location.href = j.payment_link; return; }
+      showPaying(j.ref, j.instruction);
       return;
     }
-    if (j.need_payment && j.instruction) { showPaying(j.ref); return; }
     S.cart = []; saveCart(); $('#cartCount').textContent = 0;
     S.user.points = (Number(S.user.points) || 0) - S.points + (Number(j.pointsEarned) || 0);
     S.gift = null; S.points = 0;
@@ -497,10 +499,12 @@ async function cardPayload() {
 
 // ─── "Check your phone" waiting screen (mobile-money push) ───
 let payPoll = null;
-function showPaying(ref) {
+function showPaying(ref, instruction) {
   S.pendingPay = ref;
   $('#payRef').textContent = ref;
   $('#payStatus').textContent = T('pay_awaiting');
+  const inst = $('#payInst');
+  if (instruction && inst) { inst.textContent = instruction; inst.style.display = 'block'; }
   go('paying');
   clearInterval(payPoll);
   payPoll = setInterval(async () => {
@@ -512,6 +516,10 @@ function showPaying(ref) {
         S.gift = null; S.points = 0;
         $('#okMsg').innerHTML = T('shop_thanks') + ' <b style="color:var(--gold)">' + ref + '</b><br>' + T('shop_paid_confirm');
         go('success');
+      } else if (j.failed) {
+        clearInterval(payPoll);
+        toast(T('shop_pay_cancelled'));
+        go('menu');
       }
     } catch (e) {}
   }, 4000);

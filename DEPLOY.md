@@ -96,9 +96,11 @@ You need: a GitHub account, a Flutterwave account, and Node.js 22+ installed loc
    DB_SSL        = 1
    BASE_URL      = https://moodcoffee.onrender.com   ← replace with YOUR url
    COOKIE_SECURE = 1
-   FLW_SECRET_KEY   = FLWSECK_TEST-xxxx
-   FLW_PUBLIC_KEY   = FLWPUBK_TEST-xxxx
-   FLW_WEBHOOK_SECRET = 
+   FLW_CLIENT_ID     = your-client-id            ← Flutterwave v4 keys
+   FLW_CLIENT_SECRET = your-client-secret
+   FLW_ENCRYPTION_KEY = your-encryption-key
+   FLW_ENV        = test                          ← 'test' or 'live'
+   FLW_WEBHOOK_SECRET = your-webhook-secret-hash
    ```
 
    > Do **not** set `PORT` — Render supplies it automatically and the app already reads it.
@@ -116,23 +118,40 @@ When you're ready to pay, upgrade to a paid instance (or "always-on") to keep it
 
 ---
 
-## Part 4 — Flutterwave payments
+## Part 4 — Flutterwave payments (v4)
 
-### 4.1 Test payments (works immediately)
+The app uses the Flutterwave **v4** API (OAuth2 Client ID + Client Secret) with the
+**orchestrator** flow: one call creates the customer, the payment method and the charge.
+Mobile money (MTN MoMo / Airtel Money) and bank cards are supported.
 
-1. Go to **https://dashboard.flutterwave.com → Settings → API** and copy your **test keys**
-   (they start with `FLWSECK_TEST-` and `FLWPUBK_TEST-`).
-2. Put them in the Render environment variables (and your local `.env`).
-3. Place an order on the live site. You'll be sent to the Flutterwave hosted page.
-4. Pay with a **test card**: `4188 8888 8888 8888`, expiry any future date, CVV any 3 digits,
-   PIN `1234`. For OTP, Flutterwave test payments auto-approve in test mode.
+### 4.1 Test payments (sandbox — no real money)
+
+1. Go to **https://dashboard.flutterwave.com → Settings → API** and copy your **test**
+   **Client ID**, **Client Secret** and **Encryption Key**.
+2. Put them in the Render environment variables (and your local `.env`):
+   `FLW_CLIENT_ID`, `FLW_CLIENT_SECRET`, `FLW_ENCRYPTION_KEY`, and keep `FLW_ENV=test`.
+3. Make sure **Admin → Settings → Currency** is `RWF` (mobile money needs RWF).
+4. Place an order on the live site. In sandbox the app automatically uses Flutterwave's
+   **test scenarios**:
+   - **Card** → you get a 3-D Secure redirect page → approve it → order confirms.
+   - **MTN MoMo / Airtel Money** → you get a sandbox approve-page redirect → confirm.
 5. After payment you return to the shop → **"Order Confirmed"**. The order also moves to
    `Preparing` in the admin panel.
 
 > When no keys are set, orders skip the gateway and are accepted directly (demo mode).
 > As soon as a key is present, **every** order goes through real payment — that switch is automatic.
 
-### 4.2 Live payments (the real thing)
+### 4.2 Webhook (so orders confirm even if the customer closes the tab)
+
+1. Flutterwave dashboard → **Settings → Webhooks**.
+2. Add URL: `https://<your-app>.onrender.com/api/pay/webhook`
+3. Set a **Secret Hash** of your choice, and put the same value into `FLW_WEBHOOK_SECRET`
+   on Render and in `.env`. The app verifies the `flutterwave-signature` HMAC on every
+   webhook using this value.
+4. Use the **Test webhooks** tab to send a `charge.completed` test event. The endpoint
+   should answer `200 {"ok":true}` — you can check Render's logs to confirm it was hit.
+
+### 4.3 Live payments (the real thing)
 
 To get **live** keys Flutterwave requires a verified merchant account, which needs:
 
@@ -142,15 +161,9 @@ To get **live** keys Flutterwave requires a verified merchant account, which nee
 Steps:
 
 1. In Flutterwave dashboard complete **Settings → Merchant Verification** with your URL and docs.
-2. When approved, copy the **live keys** from Settings → API.
-3. Update the keys on Render (and `.env` locally). Your first live transaction is charged for real.
-
-### 4.3 Webhook (so orders confirm even if the customer closes the tab)
-
-1. Flutterwave dashboard → **Settings → Webhooks**.
-2. Add URL: `https://<your-app>.onrender.com/api/pay/webhook`
-3. Set a **Secret Hash** of your choice, and put the same value into `FLW_WEBHOOK_SECRET`
-   on Render and in `.env`.
+2. When approved, copy the **live** Client ID / Client Secret / Encryption Key from Settings → API.
+3. On Render (and `.env`) set `FLW_ENV=live` and update the three `FLW_*` keys.
+   Live mode never sends sandbox scenario headers, and charges real money.
 
 ---
 
@@ -182,7 +195,9 @@ Easiest: use your Gmail (enable 2-step verification → create an **App Password
 | Site loads but shows "Database not ready" | DB env vars wrong; re-check host/port/user/pass on TiDB. Confirm DB was created (`node --env-file=.env.cloud setup.js` said OK). |
 | Can't connect to TiDB | Did you set `DB_SSL=1`? Port must be `4000`. |
 | Order stuck on "Pending" forever | Webhook or verify URL problem. Check `BASE_URL`, and confirm the webhook Secret Hash matches `FLW_WEBHOOK_SECRET`. Also open the Flutterwave dashboard → Transactions to see the transaction ID. |
-| Payment fails on the hosted page | You may be using a test key with a live-like flow, or currency mismatch. Use the test card above in test mode. |
+| "Could not start the payment" at checkout | The v4 charge call failed — check Render logs for the real error (usually missing/invalid `FLW_CLIENT_ID`/`FLW_CLIENT_SECRET`, or the charge amount/currency). |
+| Card payment says not ready | Make sure `FLW_ENCRYPTION_KEY` is set — it's used to encrypt card details in the browser. |
+| Payment fails on the payment page | Currency mismatch (mobile money needs `RWF`), or test/live keys mixed up. In sandbox the app sends scenario keys that auto-approve the test flows. |
 | Site very slow first load | Free Render instance is waking from sleep — upgrade to paid when ready. |
 
 ---

@@ -84,13 +84,15 @@ They connect through two things:
   512 MB RAM. Great for now; upgrade to a paid instance later for always-on.
 
 ### Flutterwave — payments
-- **What it does:** processes MTN MoMo, Airtel Money and card payments on a
-  secure hosted page. Your app creates a payment link; the customer pays on
-  Flutterwave; Flutterwave confirms back to your app.
+- **What it does:** processes MTN MoMo, Airtel Money and card payments using the
+  **v4** API. Your app creates a charge; the customer approves it on Flutterwave's
+  page or on their phone; Flutterwave confirms back to your app (webhook).
 - **Why you needed a website first:** to get **live** keys, Flutterwave requires
   your real, public website URL for merchant verification. Your Render URL
   (`https://moodcoffee.onrender.com`) satisfies this.
-- **Keys:** live in Environment Variables on Render and in your local `.env`.
+- **Keys:** v4 needs **Client ID**, **Client Secret** and **Encryption Key**
+  (Settings → API on the Flutterwave dashboard). They live in Environment
+  Variables on Render and in your local `.env`.
 
 ---
 
@@ -206,7 +208,7 @@ If you ever rebuild or switch accounts, here is the exact order:
    - `DB_HOST`, `DB_PORT` (4000), `DB_USER`, `DB_PASS`, `DB_NAME`, `DB_SSL=1`
    - `BASE_URL=https://<your-app>.onrender.com`
    - `COOKIE_SECURE=1`
-   - `FLW_SECRET_KEY`, `FLW_PUBLIC_KEY`, `FLW_WEBHOOK_SECRET`
+    - `FLW_CLIENT_ID`, `FLW_CLIENT_SECRET`, `FLW_ENCRYPTION_KEY`, `FLW_ENV=test`, `FLW_WEBHOOK_SECRET`
 6. **Deploy**, open `/admin`, create the first admin.
 7. **Flutterwave:** add webhook `https://<your-app>.onrender.com/api/pay/webhook`,
    put the webhook secret in the env vars.

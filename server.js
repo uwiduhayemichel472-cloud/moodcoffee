@@ -275,6 +275,12 @@ app.post('/api/orders', H.requireCustomer, async (req, res) => {
     }
     if (loyaltyOn) pointsEarned = Math.floor(subtotal);
 
+    // Delivery fee — collected with the online payment too, so the amount the
+    // gateway charges matches what the checkout shows the customer.
+    const freeDel = Number(st.freeDelivery) || 0;
+    const delFee = (freeDel > 0 && subtotal >= freeDel) ? 0 : (Number(st.deliveryFee) || 0);
+    total = Math.round((total + delFee) * 100) / 100;
+
     const ref = 'MD-' + Date.now().toString().slice(-6) + '-' + Math.floor(100 + Math.random() * 900);
     const useGateway = pay.configured();
     const currency = st.currency || 'USD';
@@ -301,6 +307,7 @@ app.post('/api/orders', H.requireCustomer, async (req, res) => {
           description: items.map(i => i.name + ' ×' + i.qty).join(', ').slice(0, 180)
         });
       } catch (e) {
+        console.error('Payment charge creation failed:', e.message);
         return res.status(502).json({ error: 'Could not start the payment. Please try again in a moment.' });
       }
       const conn = await pool.getConnection();
@@ -356,16 +363,23 @@ app.post('/api/orders', H.requireCustomer, async (req, res) => {
 
 // ─── Payment confirmation (Flutterwave) ───────────────
 // Marks a 'Pending' order as paid only after the transaction is verified
-// server-side with Flutterwave. Safe to call more than once.
-async function confirmPaidOrder(ref, txId) {
+// server-side with Flutterwave. Safe to call more than once. `maxTries`
+// lets the return-URL path wait a few seconds for the charge to settle
+// before giving up (the webhook path checks just once).
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function confirmPaidOrder(ref, txId, maxTries = 1) {
   const rows = await q('SELECT * FROM orders WHERE ref=?', [ref]);
   if (!rows.length) return false;
   const o = rows[0];
   if (o.status !== 'Pending') return o.status === 'Preparing';
   const chargeId = String(txId || '') || String(o.charge_id || '');
   if (!chargeId) return false;
-  let tx;
-  try { tx = await pay.verifyTransaction(chargeId); } catch (e) { return false; }
+  let tx = null;
+  for (let i = 0; i < maxTries; i++) {
+    try { tx = await pay.verifyTransaction(chargeId); } catch (e) { tx = null; }
+    if (tx && tx.status === 'succeeded') break;
+    if (i < maxTries - 1) await sleep(1500);
+  }
   if (!tx || tx.status !== 'succeeded') return false;
   const st = await loadSettings();
   const currency = st.currency || 'USD';
@@ -411,25 +425,55 @@ async function confirmPaidOrder(ref, txId) {
 // The charge id was saved when the order was created, so we can verify it.
 app.get('/api/pay/return', async (req, res) => {
   const ref = String(req.query.ref || '');
-  const ok = ref ? await confirmPaidOrder(ref) : false;
-  res.redirect('/shop' + (ok ? '?paid=' + encodeURIComponent(ref) : '?payfail=1'));
+  // Wait a few seconds for the charge to settle before deciding.
+  if (ref && await confirmPaidOrder(ref, null, 8)) {
+    return res.redirect('/shop?paid=' + encodeURIComponent(ref));
+  }
+  if (ref) {
+    const rows = await q('SELECT status FROM orders WHERE ref=?', [ref]);
+    if (rows.length && rows[0].status === 'Pending')
+      return res.redirect('/shop?pending=' + encodeURIComponent(ref)); // still processing — frontend keeps polling
+  }
+  res.redirect('/shop?payfail=1');
 });
 
 // Kept for safety: lets a caller confirm with an explicit charge id too.
 app.get('/api/pay/verify', async (req, res) => {
   const ref = String(req.query.ref || '');
   const txId = String(req.query.transaction_id || req.query.tx_ref || '');
-  const ok = (ref && txId) ? await confirmPaidOrder(ref, txId) : false;
-  res.redirect('/shop' + (ok ? '?paid=' + encodeURIComponent(ref) : '?payfail=1'));
+  if (ref && txId && await confirmPaidOrder(ref, txId, 8))
+    return res.redirect('/shop?paid=' + encodeURIComponent(ref));
+  if (ref) {
+    const rows = await q('SELECT status FROM orders WHERE ref=?', [ref]);
+    if (rows.length && rows[0].status === 'Pending')
+      return res.redirect('/shop?pending=' + encodeURIComponent(ref));
+  }
+  res.redirect('/shop?payfail=1');
 });
 
 // Live status poll for orders that don't redirect (e.g. mobile-money push).
+// Also detects failed/voided charges so the waiting screen can give up.
 app.get('/api/pay/status', async (req, res) => {
   try {
     const ref = String(req.query.ref || '');
-    const rows = await q('SELECT status FROM orders WHERE ref=?', [ref]);
-    const status = rows.length ? rows[0].status : 'unknown';
-    res.json({ ok: status === 'Preparing', paid: status === 'Preparing', status, ref });
+    const rows = await q('SELECT id,status,charge_id FROM orders WHERE ref=?', [ref]);
+    if (!rows.length) return res.json({ paid: false, failed: false, status: 'unknown', ref });
+    const o = rows[0];
+    if (o.status === 'Preparing') return res.json({ paid: true, failed: false, status: 'Preparing', ref });
+    if (o.status === 'Cancelled') return res.json({ paid: false, failed: true, status: 'Cancelled', ref });
+    if (o.status === 'Pending' && o.charge_id) {
+      try {
+        const tx = await pay.verifyTransaction(o.charge_id);
+        if (tx && (tx.status === 'failed' || tx.status === 'voided')) {
+          await q("UPDATE orders SET status='Cancelled' WHERE id=? AND status='Pending'", [o.id]);
+          return res.json({ paid: false, failed: true, status: 'Cancelled', ref });
+        }
+        // Charge succeeded but the webhook/return may have missed it — confirm now.
+        if (tx && tx.status === 'succeeded' && await confirmPaidOrder(ref, o.charge_id, 1))
+          return res.json({ paid: true, failed: false, status: 'Preparing', ref });
+      } catch (e) { /* charge not queryable yet — keep waiting */ }
+    }
+    res.json({ paid: false, failed: false, status: o.status, ref });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
