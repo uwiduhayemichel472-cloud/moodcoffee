@@ -101,11 +101,17 @@ async function main() {
   }
 
   await conn.end();
-  console.log('OK: database "' + cfg.db.database + '" is up to date. Restart the server.');
+  console.log('OK: database "' + cfg.db.database + '" is up to date.');
 }
 
-main().catch(e => {
-  console.error('Migration failed: ' + e.message);
-  console.error('Is MySQL running? (Start it in XAMPP Control Panel)');
-  process.exit(1);
-});
+// Auto-run when invoked directly (node migrate.js), or imported by server.js
+// so every deploy brings the schema up to date automatically.
+if (require.main === module) {
+  main().catch(e => {
+    console.error('Migration failed: ' + e.message);
+    console.error('Is MySQL running? (Start it in XAMPP Control Panel)');
+    process.exit(1);
+  });
+}
+
+module.exports = { migrate: main };

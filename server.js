@@ -748,6 +748,11 @@ async function boot() {
     console.error('Database not ready. Run: npm run db:init   (then start XAMPP MySQL)');
     process.exit(1);
   }
+  try {
+    await require('./migrate.js').migrate();
+  } catch (e) {
+    console.error('Startup migration failed (continuing): ' + e.message);
+  }
   setInterval(H.purgeExpired, 60 * 60 * 1000);
   app.listen(cfg.port, () => {
     console.log('MOOD Coffee Shop & Bakery running:');
