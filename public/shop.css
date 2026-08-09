@@ -16,10 +16,11 @@ header.open .shop-burger span:nth-child(1){transform:translateY(7px) rotate(45de
 header.open .shop-burger span:nth-child(2){opacity:0}
 header.open .shop-burger span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
 .lang-switch{position:relative;display:inline-block;margin-left:6px}
-.lang-toggle{display:flex;align-items:center;gap:6px;background:none;border:1px solid rgba(212,160,96,.3);color:var(--cream);font-family:'Jost',sans-serif;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;padding:5px 10px;border-radius:3px;cursor:pointer;opacity:.8;transition:all .2s}
-.lang-toggle:hover{opacity:1;border-color:var(--gold)}
-.lang-toggle .globe{font-size:.8rem}
-.lang-toggle .caret{font-size:.58rem;opacity:.7}
+.lang-toggle{display:flex;align-items:center;gap:7px;background:linear-gradient(135deg,rgba(212,160,96,.22),rgba(212,160,96,.06));border:1px solid rgba(212,160,96,.45);color:var(--cream);font-family:'Jost',sans-serif;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border-radius:999px;cursor:pointer;opacity:.95;transition:all .25s;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.lang-toggle:hover{opacity:1;border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,160,96,.16),0 6px 18px rgba(0,0,0,.35)}
+.lang-toggle .lang-ico{color:var(--gold);display:flex;flex-shrink:0}
+.lang-toggle .lang-cur{color:var(--gl);font-weight:500;text-transform:none;letter-spacing:.02em;font-size:.7rem}
+.lang-toggle .caret{font-size:.58rem;opacity:.75}
 .lang-menu{position:absolute;top:calc(100% + 6px);right:0;min-width:150px;background:var(--dk);border:1px solid rgba(212,160,96,.25);border-radius:6px;padding:5px;display:none;flex-direction:column;z-index:650;box-shadow:0 12px 32px rgba(0,0,0,.5)}
 .lang-switch.open .lang-menu{display:flex;animation:up .2s both}
 .lang-option{background:none;border:none;color:var(--cream);font-family:'Jost',sans-serif;font-size:.78rem;text-align:left;padding:8px 12px;border-radius:4px;cursor:pointer;transition:background .15s,color .15s}
@@ -124,6 +125,11 @@ label input:focus{border-color:var(--gold)}
 .mt{font-family:'Cormorant Garamond',serif;font-size:1.7rem;font-weight:300;color:var(--foam);margin-bottom:6px}
 .ms{font-size:.8rem;font-weight:200;color:rgba(245,230,211,.5);margin-bottom:24px}
 .auth-btn{width:100%;margin-top:6px;padding:14px;background:var(--gold);border:none;color:var(--esp);font-family:'Jost',sans-serif;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;font-weight:500;border-radius:6px}
+.auth-google{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:13px 14px;background:#fff;color:#2a2118;border:1px solid rgba(245,230,211,.25);border-radius:6px;font-family:'Jost',sans-serif;font-size:.78rem;font-weight:500;letter-spacing:.02em;cursor:pointer;transition:all .25s;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.auth-google:hover{background:#f4f1ec;border-color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+.auth-google svg{flex-shrink:0}
+.authDivider{display:flex;align-items:center;gap:10px;margin:15px 0 12px;color:rgba(245,230,211,.4);font-size:.62rem;letter-spacing:.16em;text-transform:uppercase}
+.authDivider::before,.authDivider::after{content:'';flex:1;height:1px;background:rgba(212,160,96,.16)}
 .swap{text-align:center;margin-top:16px;font-size:.78rem;color:rgba(245,230,211,.5)}
 .swap b{color:var(--gold);cursor:pointer;font-weight:400}
 .err{color:#e07070;font-size:.76rem;margin-top:10px;display:none}
@@ -161,6 +167,7 @@ label input:focus{border-color:var(--gold)}
 .accRow{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid rgba(212,160,96,.1);font-size:.86rem}
 .accRow span{color:rgba(245,230,211,.5);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;flex-shrink:0}
 .accRow b{color:var(--foam);font-weight:400;text-align:right;word-break:break-word}
+.accEmpty{padding:12px 2px;border-bottom:1px solid rgba(212,160,96,.1);font-size:.76rem;font-weight:200;line-height:1.6;color:rgba(245,230,211,.55);word-break:break-word;overflow-wrap:break-word}
 .accFoot{margin-top:22px}
 .oc{background:var(--dk);border:1px solid rgba(212,160,96,.12);border-radius:10px;padding:20px;margin-bottom:14px}
 .ocempty{background:linear-gradient(160deg,rgba(44,18,0,.7),rgba(26,10,0,.85));border:1px solid rgba(212,160,96,.22);border-radius:18px;padding:44px 26px 46px;text-align:center;margin:10px 0 30px;position:relative;overflow:hidden}

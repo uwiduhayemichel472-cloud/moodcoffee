@@ -247,6 +247,8 @@ const I18N = (function () {
       auth_login2: 'Login',
       auth_reg_paused: 'New registrations are paused.',
       auth_welcome_toast: 'Welcome,',
+      auth_google: 'Continue with Google',
+      auth_or: 'or',
 
       /* Account */
       acc_title: 'My Account',
@@ -521,6 +523,8 @@ const I18N = (function () {
       auth_login2: 'Connexion',
       auth_reg_paused: 'Les nouvelles inscriptions sont en pause.',
       auth_welcome_toast: 'Bienvenue,',
+      auth_google: 'Continuer avec Google',
+      auth_or: 'ou',
 
       /* Account */
       acc_title: 'Mon Compte',
@@ -538,7 +542,7 @@ const I18N = (function () {
       acc_pts_worth: 'valeur',
       acc_next_reward: 'points avant votre prochaine récompense',
       acc_rewards_off: 'Les récompenses sont actuellement désactivées.',
-      acc_rewards_none: 'Pas encore de récompense — continuez à commander pour en débloquer une !',
+      acc_rewards_none: 'Pas encore de récompense. Continuez à commander !',
       acc_rewards_used: 'Utilisé',
       acc_copy: 'Copier',
       acc_gift_none: 'Pas encore de carte cadeau',
@@ -795,6 +799,8 @@ const I18N = (function () {
       auth_login2: 'Injira',
       auth_reg_paused: 'Iyandikisha rishya rirahagaritswe.',
       auth_welcome_toast: 'Murakaza neza,',
+      auth_google: 'Komeza na Google',
+      auth_or: 'cyangwa',
 
       /* Account */
       acc_title: 'Konti Yanjye',
@@ -917,12 +923,15 @@ const I18N = (function () {
   }
 
   /* ── Language dropdown switcher ── */
+  const LANG_ICON = '<svg class="lang-ico" viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>';
   function renderSwitcher() {
     const list = enabledList();
     document.querySelectorAll('[data-lang-switch]').forEach(el => {
       el.innerHTML =
         '<div class="lang-toggle" onclick="I18N.toggleLangMenu(event)">' +
-        '<span class="globe">🌐</span><span class="lang-label" data-i18n="lang_label">' + t('lang_label') + '</span><span class="caret">▾</span>' +
+        LANG_ICON +
+        '<span class="lang-cur">' + LANGS[current()] + '</span>' +
+        '<span class="caret">▾</span>' +
         '</div>' +
         '<div class="lang-menu">' +
         list.map(l => '<button type="button" class="lang-option' + (l === current() ? ' active' : '') + '" data-lang-opt="' + l + '" onclick="I18N.setLang(\'' + l + '\')">' + LANGS[l] + '</button>').join('') +

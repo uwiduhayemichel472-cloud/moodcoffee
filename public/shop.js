@@ -65,6 +65,10 @@ async function init() {
     } catch (e) {}
   } catch (e) { toast('Could not reach server.'); }
   renderNav(); renderCats(); renderMenu();
+  if (qp.get('google')) {
+    if (S.user) toast(T('auth_welcome_toast') + ' ' + S.user.name.split(' ')[0] + '! ☕');
+    if (window.opener) { window.opener.postMessage('mood-google-auth', location.origin); window.close(); }
+  }
   if (paidRef) {
     S.cart = []; saveCart(); $('#cartCount').textContent = 0; S.gift = null; S.points = 0;
     $('#okMsg').innerHTML = T('shop_thanks') + ' <b style="color:var(--gold)">' + paidRef + '</b><br>' + T('shop_paid_confirm');
@@ -292,11 +296,26 @@ function renderCart() {
 }
 
 // ─── Auth ───
+function googleAuthHtml() {
+  if (!S.settings.googleAuth) return '';
+  return '<button type="button" class="auth-google" onclick="googleLogin()">' +
+    '<svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.6 39.6 16.3 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37.5 39.4 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>' +
+    '<span>' + T('auth_google') + '</span></button>' +
+    '<div class="authDivider"><span>' + T('auth_or') + '</span></div>';
+}
+function googleLogin() {
+  const w = window.open('/api/auth/google/start', 'mood_google', 'width=520,height=660');
+  if (!w) location.href = '/api/auth/google/start';
+}
+window.addEventListener('message', function (e) {
+  if (e.data === 'mood-google-auth' && e.origin === location.origin) location.reload();
+});
 function auth(m) {
   if (m === 'signup' && S.settings.toggles.reg === false) { toast(T('auth_reg_paused')); return; }
   $('#authContent').innerHTML =
     '<div class="mt">' + (m === 'login' ? T('auth_welcome') : T('auth_create')) + '</div>' +
     '<div class="ms">' + (m === 'login' ? T('auth_signin') : T('auth_join')) + '</div>' +
+    googleAuthHtml() +
     (m === 'login' ? '' : '<label>' + T('auth_name') + '<input id="auName"></label>') +
     '<label>' + T('auth_email') + '<input id="auEmail" type="email"></label>' +
     (m === 'login' ? '' : '<label>' + T('auth_phone') + '<input id="auPhone" placeholder="+250 7XX XXX XXX"></label>') +
@@ -328,7 +347,7 @@ function loyaltyHtml() {
     '</div>';
 }
 function rewardsHtml(list) {
-  if (!list.length) return '<div class="accRow"><span>' + T('acc_rewards_none') + '</span><b>—</b></div>';
+  if (!list.length) return '<div class="accEmpty">' + T('acc_rewards_none') + '</div>';
   return list.map(r => '<div class="accRow rwrow"><span><b class="rwt">' + esc(r.title) + '</b><code>' + esc(r.code) + '</code></span>' +
     (r.status ? '<b class="rw-val">' + money(r.value) + '</b><button class="rw-copy" onclick="copyCode(\'' + esc(r.code) + '\')">' + T('acc_copy') + '</button>' : '<b class="rw-used">' + T('acc_rewards_used') + '</b>') + '</div>').join('');
 }

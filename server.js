@@ -62,7 +62,8 @@ async function loadSettings() {
     deliveryZones: s.delivery_zones, toggles, pointsValue: Number(s.points_value) || 0,
     loyaltyThreshold: Math.max(1, Number(s.loyalty_threshold) || 100),
     maxReviewLen: Math.max(20, Math.min(2000, Number(s.max_review_len) || 300)),
-    smtp
+    smtp,
+    googleAuth: !!(cfg.google && cfg.google.clientId && cfg.google.clientSecret && cfg.google.redirectUri)
   };
 }
 
@@ -152,6 +153,83 @@ app.post('/api/login', async (req, res) => {
 app.post('/api/logout', async (req, res) => {
   await H.logout(res, req, 'customer');
   res.json({ ok: true });
+});
+
+// ─── "Sign in with Google" (OAuth 2.0) ─────────────────────────────────
+// Flow: the storefront opens /api/auth/google/start in a popup → Google →
+// callback swaps the code for a profile, links/creates the customer, sets the
+// session cookie, then redirects to /shop?google=ok. The popup tells the
+// opener to refresh and closes itself.
+function googleConfigured() {
+  const g = cfg.google || {};
+  return !!(g.clientId && g.clientSecret && g.redirectUri);
+}
+app.get('/api/auth/google/start', (req, res) => {
+  if (!googleConfigured()) return res.status(503).json({ error: 'Google sign-in is not configured yet.' });
+  const state = crypto.randomBytes(24).toString('hex');
+  H.setCookie(res, 'google_state', state, 600);
+  const params = new URLSearchParams({
+    client_id: cfg.google.clientId,
+    redirect_uri: cfg.google.redirectUri,
+    response_type: 'code',
+    scope: 'openid email profile',
+    prompt: 'select_account',
+    state
+  });
+  res.redirect('https://accounts.google.com/o/oauth2/v2/auth?' + params.toString());
+});
+
+app.get('/api/auth/google/callback', async (req, res) => {
+  try {
+    const code = String(req.query.code || '');
+    const state = String(req.query.state || '');
+    const cookies = H.getCookies(req);
+    if (!code || !state || state !== cookies.google_state)
+      return res.status(400).send('Invalid Google sign-in. Please try again.');
+    H.clearCookie(res, 'google_state');
+    if (!googleConfigured())
+      return res.status(503).send('Google sign-in is not configured yet.');
+    const tok = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: cfg.google.clientId,
+        client_secret: cfg.google.clientSecret,
+        redirect_uri: cfg.google.redirectUri,
+        grant_type: 'authorization_code'
+      })
+    }).then(r => r.json());
+    if (!tok.access_token) {
+      console.error('Google token error:', JSON.stringify(tok).slice(0, 400));
+      return res.status(401).send('Google sign-in failed. Please try again.');
+    }
+    const info = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: 'Bearer ' + tok.access_token }
+    }).then(r => r.json());
+    const email = String(info.email || '').toLowerCase();
+    if (!email) return res.status(401).send('Your Google account has no email address.');
+    const st = await loadSettings();
+    if (st.toggles.reg === false)
+      return res.status(503).send('New registrations are currently disabled.');
+    const name = String(info.name || info.given_name || '').trim().slice(0, 80) || email.split('@')[0];
+    const rows = await q('SELECT id FROM customers WHERE email=?', [email]);
+    let userId;
+    if (rows.length) {
+      userId = rows[0].id;
+    } else {
+      // Google-only accounts have no password, so store an unusable hash.
+      const r = await q('INSERT INTO customers (name,email,pass_hash,phone) VALUES (?,?,?,?)',
+        [name, email, H.hashPassword(crypto.randomBytes(24).toString('hex')), '']);
+      userId = r.insertId;
+      H.notify('New customer (Google): ' + name);
+    }
+    await H.issueSession(res, 'customer', userId, req);
+    res.redirect('/shop?google=ok');
+  } catch (e) {
+    console.error('Google callback error:', e.message);
+    res.status(500).send('Google sign-in failed. Please try again.');
+  }
 });
 
 app.get('/api/me', H.requireCustomer, (req, res) => res.json({ user: req.user }));

@@ -51,5 +51,13 @@ module.exports = {
       // payment). Example: https://moodcoffee.rw
       baseUrl: process.env.BASE_URL || 'http://localhost:3000'
     }
+  },
+  // Google "Sign in with Google" (OAuth 2.0). Get an OAuth client ID + secret
+  // at https://console.cloud.google.com → APIs & Services → Credentials and add
+  // "<your site>/api/auth/google/callback" as an Authorized redirect URI.
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID || '',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    redirectUri: process.env.GOOGLE_REDIRECT_URI || ''
   }
 };
