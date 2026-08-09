@@ -812,7 +812,7 @@ const I18N = (function () {
       acc_pts_worth: 'agaciro',
       acc_next_reward: 'amasimbu kugira ngo ubone igihembo gikurikira',
       acc_rewards_off: 'Ibihembo biruhagaritswe.',
-      acc_rewards_none: 'Nta bihembo muratsindira —\nkomeza utumize kugira ngo ubone ibihembo byawe!',
+      acc_rewards_none: 'Nta bihembo muratsindira —<br>komeza utumize kugira ngo ubone ibihembo byawe!',
       acc_rewards_used: 'Byakoreshejwe',
       acc_copy: 'Koporora',
       acc_gift_none: 'Nta gift card ikiri',
