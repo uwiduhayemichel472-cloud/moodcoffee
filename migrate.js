@@ -105,6 +105,7 @@ async function main() {
   await addCol(conn, 'settings', 'max_review_len INT DEFAULT 300');
   await addCol(conn, 'sessions', "ip VARCHAR(45) DEFAULT ''");
   await addCol(conn, 'sessions', "ua VARCHAR(255) DEFAULT ''");
+  await addCol(conn, 'payment_events', "client VARCHAR(30) DEFAULT NULL");
 
   // Ensure the loyalty toggle exists in the existing settings JSON (default ON)
   const [stRows] = await conn.query('SELECT toggles FROM settings WHERE id=1');

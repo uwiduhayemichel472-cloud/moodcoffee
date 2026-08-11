@@ -167,7 +167,7 @@ async function loadOverview() {
   </div>
   ${s.payFlags && s.payFlags.length ? `<div class="card2" style="border-color:#c0392b">
     <div class="hd"><b style="color:#c0392b">Payment flags</b></div><div class="bd">
-      ${s.payFlags.map(f => `<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #f0ece8;font-size:.82rem"><span><b>${esc(f.order_ref || '—')}</b> · ${esc(f.gateway)} ${esc(f.event)} · ${esc(f.status)}${Number(f.amount) ? ' · ' + money(f.amount) : ''}<div class="d" style="color:#888;font-size:.75rem">${dt(f.created_at)} · gw ref ${esc(f.gw_ref || '')}</div></span></div>`).join('')}
+      ${s.payFlags.map(f => `<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #f0ece8;font-size:.82rem"><span><b>${esc(f.order_ref || '—')}</b> · ${esc(f.gateway)} ${esc(f.event)} · ${esc(f.status)}${Number(f.amount) ? ' · ' + money(f.amount) : ''}${f.client ? ' · ' + esc(f.client) : ''}<div class="d" style="color:#888;font-size:.75rem">${dt(f.created_at)} · gw ref ${esc(f.gw_ref || '')}</div></span></div>`).join('')}
       <p style="color:#c0392b;font-size:.78rem;margin:8px 0 0">Check the Paypack dashboard for these refs — if the customer was charged but Paypack shows failed, refund them.</p>
     </div></div>` : ''}
   <div class="card2"><div class="hd"><b>Recent orders</b></div><div class="bd">

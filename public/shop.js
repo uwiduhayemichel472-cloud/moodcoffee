@@ -440,7 +440,7 @@ function renderCheckout() {
   if (!S.cart.length) { go('menu'); return; }
   if (!S.user) { toast(T('shop_please_login')); auth('login'); return; }
   S.promo = null;
-  const keys = Object.keys(PAY).filter(k => S.settings.toggles[k] !== false);
+  const keys = Object.keys(PAY).filter(k => S.settings.toggles[k] !== false && (k !== 'card' || !!S.settings.flwEncKey));
   if (!keys.length) { toast(T('shop_payments_paused')); go('menu'); return; }
   if (keys.indexOf(S.pay) === -1) S.pay = keys[0];
   $('#payOpts').innerHTML = keys.map(k =>

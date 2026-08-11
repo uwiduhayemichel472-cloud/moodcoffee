@@ -391,7 +391,7 @@ app.post('/api/orders', H.requireCustomer, async (req, res) => {
         if (gateMethod !== 'card' && paypack.configured()) {
           const t = await paypack.cashin({ amount: payAmount, phone: payPhone, idempotencyKey: ref });
           result = { chargeId: t.ref, url: '', instruction: 'A payment prompt was sent to ' + payPhone + '. Check your phone and approve it to confirm the order.' };
-          await logPayEvent({ order_ref: ref, gateway: 'paypack', gw_ref: t.ref, event: 'charge_created', status: t.status, amount: payAmount });
+          await logPayEvent({ order_ref: ref, gateway: 'paypack', gw_ref: t.ref, event: 'charge_created', status: t.status, amount: payAmount, client: payPhone });
         } else {
           result = await pay.createPaymentLink({
             amount: payAmount, currency,
@@ -506,8 +506,8 @@ function gatewayPaid(o, tx) {
 // failures) so staff can investigate payment disputes later.
 async function logPayEvent(o) {
   try {
-    await q('INSERT INTO payment_events (order_ref,gateway,gw_ref,event,status,amount) VALUES (?,?,?,?,?,?)',
-      [o.order_ref || null, o.gateway || 'paypack', o.gw_ref || null, o.event || '', o.status || null, o.amount || 0]);
+    await q('INSERT INTO payment_events (order_ref,gateway,gw_ref,event,status,amount,client) VALUES (?,?,?,?,?,?,?)',
+      [o.order_ref || null, o.gateway || 'paypack', o.gw_ref || null, o.event || '', o.status || null, o.amount || 0, o.client || null]);
   } catch (e) { /* audit logging is optional */ }
 }
 async function confirmPaidOrder(ref, txId, maxTries = 1) {
@@ -616,7 +616,7 @@ app.get('/api/pay/status', async (req, res) => {
       try {
         const tx = await gatewayVerify(o, o.charge_id);
         if (tx && (tx.status === 'failed' || tx.status === 'voided')) {
-          await logPayEvent({ order_ref: ref, gateway: o.payment === 'card' ? 'flutterwave' : 'paypack', gw_ref: String(o.charge_id), event: 'poll_failed', status: tx.status, amount: Number(tx.amount) || 0 });
+          await logPayEvent({ order_ref: ref, gateway: o.payment === 'card' ? 'flutterwave' : 'paypack', gw_ref: String(o.charge_id), event: 'poll_failed', status: tx.status, amount: Number(tx.amount) || 0, client: o.phone });
           await q("UPDATE orders SET status='Cancelled' WHERE id=? AND status='Pending'", [o.id]);
           if (o.payment !== 'card' && tx.status === 'failed')
             H.notify('Payment flag: order ' + ref + ' failed payment (ref ' + String(o.charge_id).slice(0, 18) + '…). If the customer was charged, refund it in the Paypack dashboard.');
@@ -656,14 +656,14 @@ app.post('/api/pay/webhook', async (req, res) => {
       if (d.status === 'successful') {
         const rows = await q('SELECT ref FROM orders WHERE charge_id=?', [String(d.ref)]);
         if (rows.length) {
-          await logPayEvent({ order_ref: rows[0].ref, gateway: 'paypack', gw_ref: String(d.ref), event: 'webhook_success', status: d.status, amount: Number(d.amount) || 0 });
+          await logPayEvent({ order_ref: rows[0].ref, gateway: 'paypack', gw_ref: String(d.ref), event: 'webhook_success', status: d.status, amount: Number(d.amount) || 0, client: String(d.client || '') });
           await confirmPaidOrder(rows[0].ref, String(d.ref));
         }
       } else if (d.status === 'failed') {
         const rows = await q('SELECT id,ref,status FROM orders WHERE charge_id=?', [String(d.ref)]);
         if (rows.length) {
           const o = rows[0];
-          await logPayEvent({ order_ref: o.ref, gateway: 'paypack', gw_ref: String(d.ref), event: 'webhook_failed', status: d.status, amount: Number(d.amount) || 0 });
+          await logPayEvent({ order_ref: o.ref, gateway: 'paypack', gw_ref: String(d.ref), event: 'webhook_failed', status: d.status, amount: Number(d.amount) || 0, client: String(d.client || '') });
           if (o.status === 'Pending') {
             await q("UPDATE orders SET status='Cancelled' WHERE id=? AND status='Pending'", [o.id]);
             H.notify('Payment flag: order ' + o.ref + ' was marked failed by Paypack (ref ' + String(d.ref).slice(0, 18) + '…). If the customer was charged, refund it in the Paypack dashboard.');
