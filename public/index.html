@@ -76,14 +76,14 @@ h2 em{font-style:italic;color:var(--gl)}
 .goal .tick{color:var(--gold);font-family:'Cormorant Garamond',serif;font-size:1.15rem;line-height:1.4;width:22px;flex-shrink:0}
 .goal b{display:block;font-family:'Cormorant Garamond',serif;font-weight:300;color:var(--foam);font-size:1.05rem;margin-bottom:2px}
 .goal p{font-size:.8rem;font-weight:200;color:rgba(245,230,211,.55);line-height:1.6}
-#why .wgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;max-width:1080px;margin:0 auto}
-.wc{position:relative;background:var(--dk);border:1px solid rgba(212,160,96,.14);border-radius:10px;padding:34px 28px;overflow:hidden;text-align:left;transition:all .3s}
-.wc::before{content:attr(data-n);position:absolute;top:14px;right:18px;font-family:'Cormorant Garamond',serif;font-size:5rem;font-weight:300;line-height:1;color:rgba(212,160,96,.13)}
+#why .wgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;max-width:1080px;margin:0 auto}
+.wc{position:relative;background:var(--dk);border:1px solid rgba(212,160,96,.14);border-radius:10px;padding:34px 28px;overflow:hidden;text-align:left;transition:all .3s;min-width:0;overflow-wrap:break-word;word-wrap:break-word}
+.wc::before{content:attr(data-n);position:absolute;top:14px;right:18px;font-family:'Cormorant Garamond',serif;font-size:5rem;font-weight:300;line-height:1;color:rgba(212,160,96,.13);pointer-events:none}
 .wc:hover{transform:translateY(-5px);border-color:var(--gold)}
 .wline{width:34px;height:1px;background:var(--gold);margin-bottom:18px}
-.wc h3{font-family:'Cormorant Garamond',serif;font-weight:300;color:var(--foam);font-size:1.5rem;line-height:1.15;margin-bottom:10px}
+.wc h3{font-family:'Cormorant Garamond',serif;font-weight:300;color:var(--foam);font-size:1.5rem;line-height:1.15;margin-bottom:10px;overflow-wrap:break-word;word-wrap:break-word}
 .wc h3 em{font-style:italic;color:var(--gl)}
-.wc p{font-size:.8rem;font-weight:200;color:rgba(245,230,211,.55);line-height:1.75}
+.wc p{font-size:.8rem;font-weight:200;color:rgba(245,230,211,.55);line-height:1.75;overflow-wrap:break-word;word-wrap:break-word}
 #map{padding:110px 56px 120px;background:var(--esp)}
 .mapwrap{max-width:1080px;margin:0 auto}
 .mapaddr{text-align:center;font-size:.88rem;font-weight:200;line-height:1.9;color:rgba(245,230,211,.6);margin-top:22px}
@@ -199,7 +199,7 @@ footer li a:hover{color:var(--gl)}
   #about .img,#visit .img{min-height:280px}
   #about .txt,#visit .txt{padding:50px 28px}
   .mwrap{grid-template-columns:1fr;gap:36px}
-  .wgrid{grid-template-columns:1fr 1fr}
+  #why .wgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .mgrid{grid-template-columns:repeat(2,1fr);max-width:760px}
   #map .mframe{height:320px}
   section{padding:80px 24px}
@@ -223,8 +223,13 @@ footer li a:hover{color:var(--gl)}
   #about .txt,#visit .txt{padding:42px 22px}
   .stats{flex-wrap:wrap;gap:22px}
   .stat b{font-size:2.1rem}
-  .wgrid{grid-template-columns:1fr;max-width:400px}
-  .wc{padding:28px 22px}
+  #why .wgrid{grid-template-columns:repeat(2,minmax(0,1fr));max-width:400px}
+  #why .wc{padding:20px 16px}
+  #why .wc::before{display:none}
+  #why .wline{margin-bottom:12px}
+  #why .wc h3{font-size:clamp(1.15rem,4.4vw,1.4rem);line-height:1.2;margin-bottom:8px}
+  #why .wc p{font-size:.76rem;line-height:1.7}
+  .sec-h{margin-bottom:40px}
   .mgrid{grid-template-columns:1fr;max-width:380px}
   .card{min-height:300px}
   #exp blockquote{font-size:1.1rem}

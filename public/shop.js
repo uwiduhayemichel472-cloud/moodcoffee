@@ -186,8 +186,14 @@ function chooseService(s) {
 // ─── Menu ───
 function renderServiceChip() {
   if (!S.service) { $('#svcChip').style.display = 'none'; return; }
+  const title = S.service === 'bakery' ? T('svc_bakery_title') : T('svc_coffee_title');
   $('#svcChip').style.display = 'flex';
-  $('#svcChip').innerHTML = '<span>' + (S.service === 'bakery' ? '🥐' : '☕') + ' ' + (S.service === 'bakery' ? T('svc_bakery_title') : T('svc_coffee_title')) + '</span><b onclick="openService()">' + T('svc_switch') + '</b>';
+  $('#svcChip').innerHTML =
+    '<div class="svc-info">' +
+      '<span class="svc-lbl">' + T('svc_current') + '</span>' +
+      '<b class="svc-name">' + title + '</b>' +
+    '</div>' +
+    '<button class="svc-switch" onclick="openService()">' + T('svc_switch') + ' &rarr;</button>';
 }
 function renderCats() {
   const cats = S.service ? serviceCats() : [];

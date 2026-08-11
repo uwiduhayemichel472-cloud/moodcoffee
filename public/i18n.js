@@ -200,6 +200,7 @@ const I18N = (function () {
       svc_bakery_desc: 'Fresh pastries, cakes & baked goods',
       svc_browse_bakery: 'Browse Bakery →',
       svc_switch: 'Switch service',
+      svc_current: 'Current service',
 
       /* Checkout */
       co_title: 'Complete Your Order',
@@ -476,6 +477,7 @@ const I18N = (function () {
       svc_bakery_desc: 'Pâtisseries fraîches, gâteaux & produits de boulangerie',
       svc_browse_bakery: 'Parcourir la Boulangerie →',
       svc_switch: 'Changer de service',
+      svc_current: 'Service actuel',
 
       /* Checkout */
       co_title: 'Complétez Votre Commande',
@@ -594,7 +596,7 @@ const I18N = (function () {
       nav_account: 'Konti Yanjye',
 
       /* Hero */
-      hero_eyebrow: 'Ishinzwe 2018 · Ikawa & Amakate',
+      hero_eyebrow: 'Yashinzwe 2018 · Ikawa & Amakate',
       hero_title1: 'Ikawa Nziza.',
       hero_title2: 'Umutima Mwiza.',
       hero_sub: 'Ikawa idasanzwe yatetswe vuba n\'amateka mashya yakozwe kuva mu ntangiriro, bikabikwa ashyushye hamwe n\'imbaraga nziza — hano i Kigali.',
@@ -648,7 +650,7 @@ const I18N = (function () {
       why1_d: 'Impeke ziva ku mirima mito y\'imiryango, zababwa mu bice bito kugira ngo haboneke ikikombe cy\'umuriro n\'uburinganire.',
       why2_t: 'Byatekwe',
       why2_t2: 'Bishya Buri Munsi',
-      why2_d: 'Croissant, umugati w\'inkende n\'amakata bikorwa kuva mu ntangiriro buri gitondo — ntibigera bikibwa.',
+      why2_d: 'Croissant, umugati w\'inkende n\'amateka bikorwa kuva mu ntangiriro buri gitondo — ntibigera bikibwa.',
       why3_t: 'Vuba &',
       why3_t2: 'Ashyushye',
       why3_d: 'Tumiza kuri interineti kandi ikawa n\'amakate byawe bizaba biteguye mbere yuko ugera.',
@@ -676,7 +678,7 @@ const I18N = (function () {
       news_lbl: 'Komeza Umenye',
       news_t1: 'Injira muri',
       news_t2: 'Mood.',
-      news_sub: 'Sangiza imeyili yawe n\'ikawa ukuze — tuzohereza ikaze n\'ibyifuzo by\'ikawa byawe.',
+      news_sub: 'Sangiza imeyili yawe n\'ikawa ukunda — tuzohereza ikaze n\'ibyifuzo by\'ikawa byawe.',
       news_name: 'Izina ryawe',
       news_email: 'imeyili@yawe.com',
       news_join: 'Injira',
@@ -752,6 +754,7 @@ const I18N = (function () {
       svc_bakery_desc: 'Amakate mashya, amakata & ibindi byatekwe',
       svc_browse_bakery: 'Reba Amakate →',
       svc_switch: 'Hindura serivisi',
+      svc_current: 'Serivisi iriho',
 
       /* Checkout */
       co_title: 'Suzuza Ibyo Watanze',

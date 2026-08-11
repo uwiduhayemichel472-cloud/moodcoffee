@@ -165,6 +165,21 @@ select{appearance:auto}
   .main>header input{width:130px}
   .toolbar input{width:100%}
   .tbwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .chart{min-width:360px}
-  .modal{width:94vw}
+  .card2 .bd{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .card2 .bd td{overflow-wrap:anywhere}
+  .chart{min-width:320px}
+  .modal{width:94vw;max-height:90vh;overflow-y:auto}
+}
+@media(max-width:520px){
+  .main>main{padding:12px}
+  .main>header{padding:10px 12px}
+  .main>header h1{font-size:1rem}
+  .main>header .r{gap:8px}
+  .main>header input{width:110px;padding:7px 10px;font-size:.74rem}
+  .permgrid{grid-template-columns:1fr}
+  .toolbar{gap:8px}
+  .card2 .bd{padding:14px}
+  .card2 .hd{padding:13px 14px}
+  .chart{min-width:280px}
+  .toast{left:12px;right:12px;bottom:12px;text-align:center}
 }
