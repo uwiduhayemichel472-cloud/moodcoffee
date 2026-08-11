@@ -79,6 +79,17 @@ async function main() {
     status TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   ) ENGINE=InnoDB`);
+  await conn.query(`CREATE TABLE IF NOT EXISTS payment_events (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_ref VARCHAR(30) DEFAULT NULL,
+    gateway VARCHAR(16) NOT NULL DEFAULT 'paypack',
+    gw_ref VARCHAR(80) DEFAULT NULL,
+    event VARCHAR(30) NOT NULL,
+    status VARCHAR(20) DEFAULT NULL,
+    amount DECIMAL(10,2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_order (order_ref)
+  ) ENGINE=InnoDB`);
 
   console.log('Adding new columns (if missing)…');
   await addCol(conn, 'customers', 'points INT NOT NULL DEFAULT 0');

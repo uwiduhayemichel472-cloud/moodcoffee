@@ -50,6 +50,17 @@ module.exports = {
       // Public base URL of the site (used to build the return URL after
       // payment). Example: https://moodcoffee.rw
       baseUrl: process.env.BASE_URL || 'http://localhost:3000'
+    },
+    // Paypack (paypack.rw) — Rwandan mobile money (MTN MoMo, Airtel Money,
+    // Tigo Cash). Client ID + Client Secret come from a dashboard Application;
+    // the webhook secret is the "copy webhook secret" value on the application's
+    // webhook config page. mode 'development' (default) or 'production' — must
+    // match the webhook Mode set in the dashboard.
+    paypack: {
+      clientId: process.env.PAYPACK_CLIENT_ID || '',
+      clientSecret: process.env.PAYPACK_CLIENT_SECRET || '',
+      webhookSecret: process.env.PAYPACK_WEBHOOK_SECRET || '',
+      mode: process.env.PAYPACK_MODE || 'development'
     }
   },
   // Google "Sign in with Google" (OAuth 2.0). Get an OAuth client ID + secret

@@ -100,6 +100,7 @@ r.get('/stats', perm('overview'), async (req, res) => {
     const cats = await q('SELECT c.name, COUNT(p.id) n FROM categories c LEFT JOIN products p ON p.cat_id=c.id GROUP BY c.id');
     const recentOrd = await q('SELECT o.*, COALESCE(cu.name,o.customer_name) customer FROM orders o LEFT JOIN customers cu ON cu.id=o.user_id ORDER BY o.created_at DESC LIMIT 5');
     const notifs = await q('SELECT * FROM notifications ORDER BY created_at DESC LIMIT 8');
+    const payFlags = await q(`SELECT * FROM payment_events WHERE event LIKE '%failed' ORDER BY created_at DESC LIMIT 5`);
     const dayMap = {};
     for (let i = 6; i >= 0; i--) {
       const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
@@ -110,7 +111,7 @@ r.get('/stats', perm('overview'), async (req, res) => {
       revenue: Number(rev[0].s), orders: rev[0].n, customers: cust[0].n,
       products: prod[0].n, productsActive: prodA[0].n, ordersToday: tod[0].n,
       chart: Object.values(dayMap), cats: cats.map(c => ({ name: c.name, n: c.n })),
-      recentOrders: recentOrd, notifications: notifs
+      recentOrders: recentOrd, notifications: notifs, payFlags
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

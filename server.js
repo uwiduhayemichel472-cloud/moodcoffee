@@ -7,6 +7,7 @@ const { q, pool } = require('./db.js');
 const H = require('./helpers.js');
 const mailer = require('./mailer.js');
 const pay = require('./payment.js');
+const paypack = require('./paypack.js');
 
 const app = express();
 // Keep the raw body so the Flutterwave webhook signature (HMAC over the raw
@@ -100,8 +101,8 @@ app.get('/api/init', async (req, res) => {
     if (s) { const u = await q('SELECT id,name,email,phone,points,created_at FROM customers WHERE id=?', [s.id]); if (u.length) me = u[0]; }
     // Tell the storefront whether online payments are wired up and give it the
     // key it needs to encrypt card details before they leave the browser.
-    settings.onlinePay = pay.configured();
-    settings.flwEncKey = settings.onlinePay ? cfg.gateway.flutterwave.encryptionKey : '';
+    settings.onlinePay = pay.configured() || paypack.configured();
+    settings.flwEncKey = pay.configured() ? cfg.gateway.flutterwave.encryptionKey : '';
     res.json({
       settings,
       categories: cats.map(c => ({ id: c.id, name: c.name, img: c.image, service: c.service || 'coffee' })),
@@ -366,15 +367,16 @@ app.post('/api/orders', H.requireCustomer, async (req, res) => {
     total = Math.round((total + delFee) * 100) / 100;
 
     const ref = 'MD-' + Date.now().toString().slice(-6) + '-' + Math.floor(100 + Math.random() * 900);
-    const useGateway = pay.configured();
+    const useGateway = pay.configured() || paypack.configured();
     const currency = st.currency || 'USD';
     const isRWF = currency === 'RWF';
     const payAmount = isRWF ? Math.max(100, Math.round(total)) : Math.round(total * 100) / 100;
 
-    // ── Real payments (Flutterwave) ──
-    // Create the charge first, then hold the order as 'Pending' until
-    // Flutterwave confirms the money arrived. Gift card / loyalty points are
-    // only applied at that confirmation moment.
+    // ── Real payments ──
+    // Mobile money (MTN/Airtel) goes through Paypack when configured, otherwise
+    // Flutterwave; cards always use Flutterwave. Create the charge first, then
+    // hold the order as 'Pending' until the gateway confirms the money arrived.
+    // Gift card / loyalty points are only applied at that confirmation moment.
     if (useGateway) {
       const gateMethod = ['card', 'airtel', 'mtn'].includes(payment) ? payment : 'mtn';
       const payPhone = String(req.body.payPhone || '').trim() || phone.trim();
@@ -382,14 +384,22 @@ app.post('/api/orders', H.requireCustomer, async (req, res) => {
         return res.status(400).json({ error: 'Enter a phone number for mobile money.' });
       if (currency !== 'RWF' && (gateMethod === 'mtn' || gateMethod === 'airtel'))
         return res.status(400).json({ error: 'Mobile money needs the store currency set to RWF (Admin → Settings).' });
+      if (gateMethod === 'card' && !pay.configured())
+        return res.status(400).json({ error: 'Card payments are not available right now. Please use mobile money.' });
       let result;
       try {
-        result = await pay.createPaymentLink({
-          amount: payAmount, currency,
-          tx_ref: ref,
-          customer: { email: req.user.email, name: req.user.name, phone: payPhone, method: gateMethod, card: req.body.card },
-          description: items.map(i => i.name + ' ×' + i.qty).join(', ').slice(0, 180)
-        });
+        if (gateMethod !== 'card' && paypack.configured()) {
+          const t = await paypack.cashin({ amount: payAmount, phone: payPhone, idempotencyKey: ref });
+          result = { chargeId: t.ref, url: '', instruction: 'A payment prompt was sent to ' + payPhone + '. Check your phone and approve it to confirm the order.' };
+          await logPayEvent({ order_ref: ref, gateway: 'paypack', gw_ref: t.ref, event: 'charge_created', status: t.status, amount: payAmount });
+        } else {
+          result = await pay.createPaymentLink({
+            amount: payAmount, currency,
+            tx_ref: ref,
+            customer: { email: req.user.email, name: req.user.name, phone: payPhone, method: gateMethod, card: req.body.card },
+            description: items.map(i => i.name + ' ×' + i.qty).join(', ').slice(0, 180)
+          });
+        }
       } catch (e) {
         console.error('Payment charge creation failed:', e.message);
         return res.status(502).json({ error: 'Could not start the payment. Please try again in a moment.' });
@@ -480,6 +490,26 @@ async function settleLoyalty(conn, userId, used, earned, st) {
   if (issued) H.notify('Loyalty reward x' + issued + ' issued to customer #' + userId);
   return { issued, first };
 }
+// Pick the right gateway for an order and look up its transaction. Paypack
+// transactions are found by their own ref (stored in charge_id) and report
+// status 'successful'; Flutterwave ones report 'succeeded' and carry our order
+// reference too.
+async function gatewayVerify(o, chargeId) {
+  if (o.payment === 'card' || !paypack.configured()) return pay.verifyTransaction(chargeId);
+  return paypack.find(chargeId);
+}
+function gatewayPaid(o, tx) {
+  if (o.payment === 'card' || !paypack.configured()) return !!(tx && tx.status === 'succeeded');
+  return !!(tx && tx.status === 'successful');
+}
+// Audit trail for gateway events (charge created, webhook success/failed, poll
+// failures) so staff can investigate payment disputes later.
+async function logPayEvent(o) {
+  try {
+    await q('INSERT INTO payment_events (order_ref,gateway,gw_ref,event,status,amount) VALUES (?,?,?,?,?,?)',
+      [o.order_ref || null, o.gateway || 'paypack', o.gw_ref || null, o.event || '', o.status || null, o.amount || 0]);
+  } catch (e) { /* audit logging is optional */ }
+}
 async function confirmPaidOrder(ref, txId, maxTries = 1) {
   const rows = await q('SELECT * FROM orders WHERE ref=?', [ref]);
   if (!rows.length) return false;
@@ -489,16 +519,22 @@ async function confirmPaidOrder(ref, txId, maxTries = 1) {
   if (!chargeId) return false;
   let tx = null;
   for (let i = 0; i < maxTries; i++) {
-    try { tx = await pay.verifyTransaction(chargeId); } catch (e) { tx = null; }
-    if (tx && tx.status === 'succeeded') break;
+    try { tx = await gatewayVerify(o, chargeId); } catch (e) { tx = null; }
+    if (gatewayPaid(o, tx)) break;
     if (i < maxTries - 1) await sleep(1500);
   }
-  if (!tx || tx.status !== 'succeeded') return false;
+  if (!gatewayPaid(o, tx)) return false;
   const st = await loadSettings();
   const currency = st.currency || 'USD';
-  if (String(tx.currency).toUpperCase() !== String(currency).toUpperCase()) return false;
-  if (Math.round(Number(tx.amount) * 100) < Math.round(Number(o.total) * 100)) return false;
-  if (tx.reference && String(tx.reference) !== String(ref)) return false;
+  if (o.payment === 'card' || !paypack.configured()) {
+    // Flutterwave: match currency, amount and our reference.
+    if (String(tx.currency).toUpperCase() !== String(currency).toUpperCase()) return false;
+    if (Math.round(Number(tx.amount) * 100) < Math.round(Number(o.total) * 100)) return false;
+    if (tx.reference && String(tx.reference) !== String(ref)) return false;
+  } else {
+    // Paypack: RWF only — compare the integer amount.
+    if (Math.round(Number(tx.amount)) < Math.round(Number(o.total))) return false;
+  }
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -578,13 +614,16 @@ app.get('/api/pay/status', async (req, res) => {
     if (o.status === 'Cancelled') return res.json({ paid: false, failed: true, status: 'Cancelled', ref });
     if (o.status === 'Pending' && o.charge_id) {
       try {
-        const tx = await pay.verifyTransaction(o.charge_id);
+        const tx = await gatewayVerify(o, o.charge_id);
         if (tx && (tx.status === 'failed' || tx.status === 'voided')) {
+          await logPayEvent({ order_ref: ref, gateway: o.payment === 'card' ? 'flutterwave' : 'paypack', gw_ref: String(o.charge_id), event: 'poll_failed', status: tx.status, amount: Number(tx.amount) || 0 });
           await q("UPDATE orders SET status='Cancelled' WHERE id=? AND status='Pending'", [o.id]);
+          if (o.payment !== 'card' && tx.status === 'failed')
+            H.notify('Payment flag: order ' + ref + ' failed payment (ref ' + String(o.charge_id).slice(0, 18) + '…). If the customer was charged, refund it in the Paypack dashboard.');
           return res.json({ paid: false, failed: true, status: 'Cancelled', ref });
         }
         // Charge succeeded but the webhook/return may have missed it — confirm now.
-        if (tx && tx.status === 'succeeded' && await confirmPaidOrder(ref, o.charge_id, 1))
+        if (gatewayPaid(o, tx) && await confirmPaidOrder(ref, o.charge_id, 1))
           return res.json({ paid: true, failed: false, status: 'Preparing', ref });
       } catch (e) { /* charge not queryable yet — keep waiting */ }
     }
@@ -592,20 +631,56 @@ app.get('/api/pay/status', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Flutterwave webhook: confirms the order even if the customer closes the
-// browser after paying. Protected by the flutterwave-signature HMAC (set a
-// secret hash in Flutterwave → Settings → Webhooks).
+// Paypack pings the URL with a HEAD request before delivering a payload.
+app.head('/api/pay/webhook', (req, res) => res.status(200).end());
+
+// Payment webhook: confirms the order even if the customer closes the browser
+// after paying. Accepts both Flutterwave (charge.completed, HMAC via
+// flutterwave-signature) and Paypack (transaction:processed, HMAC via
+// x-paypack-signature). Both signatures are enforced only when a secret hash
+// is configured.
 app.post('/api/pay/webhook', async (req, res) => {
   try {
+    const body = req.body || {};
+    const raw = Buffer.isBuffer(req.rawBody) ? req.rawBody.toString() : String(req.rawBody || '');
+
+    // ── Paypack ──
+    if (body.kind === 'transaction:processed' && body.data && body.data.ref) {
+      const d = body.data || {};
+      if (String(d.kind).toUpperCase() !== 'CASHIN')
+        return res.json({ ok: true });
+      const sig = String(req.headers['x-paypack-signature'] || '');
+      const secret = cfg.gateway.paypack.webhookSecret;
+      if (secret && (!sig || !paypack.verifySignature(raw, sig)))
+        return res.status(401).json({ error: 'Invalid webhook signature.' });
+      if (d.status === 'successful') {
+        const rows = await q('SELECT ref FROM orders WHERE charge_id=?', [String(d.ref)]);
+        if (rows.length) {
+          await logPayEvent({ order_ref: rows[0].ref, gateway: 'paypack', gw_ref: String(d.ref), event: 'webhook_success', status: d.status, amount: Number(d.amount) || 0 });
+          await confirmPaidOrder(rows[0].ref, String(d.ref));
+        }
+      } else if (d.status === 'failed') {
+        const rows = await q('SELECT id,ref,status FROM orders WHERE charge_id=?', [String(d.ref)]);
+        if (rows.length) {
+          const o = rows[0];
+          await logPayEvent({ order_ref: o.ref, gateway: 'paypack', gw_ref: String(d.ref), event: 'webhook_failed', status: d.status, amount: Number(d.amount) || 0 });
+          if (o.status === 'Pending') {
+            await q("UPDATE orders SET status='Cancelled' WHERE id=? AND status='Pending'", [o.id]);
+            H.notify('Payment flag: order ' + o.ref + ' was marked failed by Paypack (ref ' + String(d.ref).slice(0, 18) + '…). If the customer was charged, refund it in the Paypack dashboard.');
+          }
+        }
+      }
+      return res.json({ ok: true });
+    }
+
+    // ── Flutterwave ──
     const sig = String(req.headers['flutterwave-signature'] || '');
     const secret = cfg.gateway.flutterwave.webhookSecret;
     if (secret) {
-      const raw = Buffer.isBuffer(req.rawBody) ? req.rawBody.toString() : String(req.rawBody || '');
       const expected = crypto.createHmac('sha256', secret).update(raw).digest('base64');
       if (!sig || sig !== expected)
         return res.status(401).json({ error: 'Invalid webhook signature.' });
     }
-    const body = req.body || {};
     const d = body.data || {};
     if (body.type === 'charge.completed' && d.status === 'succeeded' && d.reference)
       await confirmPaidOrder(String(d.reference), String(d.id || ''));
