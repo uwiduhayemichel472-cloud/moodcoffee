@@ -617,7 +617,7 @@ function showPaying(ref, instruction) {
         go('success');
       } else if (j.failed) {
         clearInterval(payPoll);
-        showFailed(T('shop_pay_cancelled'));
+        showFailed((j.reason ? esc(j.reason) + '<br><br>' : '') + T('shop_pay_cancelled'));
       }
     } catch (e) {}
   }, 4000);

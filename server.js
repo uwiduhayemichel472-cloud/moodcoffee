@@ -622,7 +622,8 @@ app.get('/api/pay/status', async (req, res) => {
           await q("UPDATE orders SET status='Cancelled' WHERE id=? AND status='Pending'", [o.id]);
           if (o.payment !== 'card' && tx.status === 'failed')
             H.notify('Payment flag: order ' + ref + ' failed payment (ref ' + String(o.charge_id).slice(0, 18) + '…). If the customer was charged, refund it in the Paypack dashboard.');
-          return res.json({ paid: false, failed: true, status: 'Cancelled', ref });
+          const reason = String(tx.message || tx.error || tx.detail || '').split('\n')[0].trim();
+          return res.json({ paid: false, failed: true, status: 'Cancelled', ref, reason: reason || undefined });
         }
         // Charge succeeded but the webhook/return may have missed it — confirm now.
         if (gatewayPaid(o, tx) && await confirmPaidOrder(ref, o.charge_id, 1))

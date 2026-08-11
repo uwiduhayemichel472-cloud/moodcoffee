@@ -182,6 +182,7 @@ async function loadOverview() {
 
 /* ---------------- Products ---------------- */
 async function loadProducts() {
+  if (!S.settings || !S.settings.currency) { try { S.settings = await api('/api/admin/settings'); } catch (e) {} }
   const [prods, cats] = await Promise.all([api('/api/admin/products'), api('/api/admin/categories')]);
   catsCache = cats;
   return `
