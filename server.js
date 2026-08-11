@@ -402,7 +402,9 @@ app.post('/api/orders', H.requireCustomer, async (req, res) => {
         }
       } catch (e) {
         console.error('Payment charge creation failed:', e.message);
-        return res.status(502).json({ error: 'Could not start the payment. Please try again in a moment.' });
+        const reason = String(e.message || '').replace(/^Payment service:\s*/i, '').split('\n')[0].trim();
+        const msg = reason ? reason + '. Please try again or choose another payment method.' : 'Could not start the payment. Please try again in a moment.';
+        return res.status(502).json({ error: msg });
       }
       const conn = await pool.getConnection();
       try {

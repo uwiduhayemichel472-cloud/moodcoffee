@@ -42,9 +42,13 @@ function doCf() { closeModal('cfModal'); const cb = confirmCb; confirmCb = null;
 /* ---------------- Auth ---------------- */
 async function boot() {
   try {
-    const m = await api('/api/admin/me');
-    admin = m.admin; enterApp();
-    api('/api/admin/settings').then(s => { S.settings = s; }).catch(() => {});
+    const [m, st] = await Promise.all([
+      api('/api/admin/me'),
+      api('/api/admin/settings').catch(() => null)
+    ]);
+    admin = m.admin;
+    if (st) S.settings = st;
+    enterApp();
   } catch (e) {
     const s = await api('/api/admin/status');
     renderAuth(s.setup ? 'setup' : 'login');

@@ -184,7 +184,9 @@ const I18N = (function () {
       shop_order_more: 'Order More',
       shop_cart_title: 'Your Cart',
       shop_paid_confirm: 'Your payment was received and your order is now being prepared.',
-      shop_pay_cancelled: 'Payment was not completed — no money was taken. Your cart is still here.',
+      shop_pay_cancelled: 'Payment was not confirmed, so no money was taken from your account. This usually happens when the payment prompt was not approved in time, was declined, or the number is not registered for mobile money. Try again or choose another payment method.',
+      pay_failed_title: 'Payment Not Completed',
+      pay_try_again: 'Try Again',
 
       /* Service picker */
       svc_lbl: 'Welcome to',
@@ -461,7 +463,9 @@ const I18N = (function () {
       shop_order_more: 'Commander Plus',
       shop_cart_title: 'Votre Panier',
       shop_paid_confirm: 'Votre paiement a été reçu et votre commande est en cours de préparation.',
-      shop_pay_cancelled: 'Paiement non effectué — aucun argent n\'a été prélevé. Votre panier est toujours là.',
+      shop_pay_cancelled: 'Le paiement n\'a pas été confirmé, donc aucun argent n\'a été débité de votre compte. Cela arrive généralement quand la demande de paiement n\'a pas été approuvée à temps, a été refusée, ou que le numéro n\'est pas enregistré pour le mobile money. Réessayez ou choisissez un autre moyen de paiement.',
+      pay_failed_title: 'Paiement Non Effectué',
+      pay_try_again: 'Réessayer',
 
       /* Service picker */
       svc_lbl: 'Bienvenue chez',
@@ -738,7 +742,9 @@ const I18N = (function () {
       shop_order_more: 'Tumiza Ikindi',
       shop_cart_title: 'Igikarito Cyawe',
       shop_paid_confirm: 'Amafaranga yageze kuri twe kandi icyo watanze kirimo gutegurwa.',
-      shop_pay_cancelled: 'Kwishyura ntibyatewe — nta mafaranga yakuwe. Igikarito cyawe kirihari.',
+      shop_pay_cancelled: 'Kwishyura ntabwo byemejwe, bityo nta mafaranga yakuwe kuri konti yawe. Ibi akenshi bibaho iyo ubwemezo bwo kwishyura butemejwe ku gihe, bwanganijwe, cyangwa iyo nomero itandikishijwe kuri mobile money. Gerageza usubire cyangwa uhitemo ubundi buryo bwo kwishyura.',
+      pay_failed_title: 'Kwishyura Ntibyasozwa',
+      pay_try_again: 'Ongera Ugerageze',
 
       /* Service picker */
       svc_lbl: 'Murakaza neza kuri',

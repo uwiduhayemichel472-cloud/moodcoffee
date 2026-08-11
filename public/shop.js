@@ -76,7 +76,7 @@ async function init() {
   } else if (pendingRef) {
     showPaying(pendingRef);
   } else if (payFail) {
-    toast(T('shop_pay_cancelled'));
+    showFailed(T('shop_pay_cancelled'));
   } else {
     openService();
   }
@@ -160,7 +160,7 @@ function renderNav() {
 }
 
 function go(v) {
-  ['menu', 'checkout', 'orders', 'success', 'paying'].forEach(x => $('#' + x + 'View').style.display = x === v ? 'block' : 'none');
+  ['menu', 'checkout', 'orders', 'success', 'paying', 'failed'].forEach(x => $('#' + x + 'View').style.display = x === v ? 'block' : 'none');
   if (v === 'menu') {
     if (!S.service) openService();
     renderMenu();
@@ -617,11 +617,20 @@ function showPaying(ref, instruction) {
         go('success');
       } else if (j.failed) {
         clearInterval(payPoll);
-        toast(T('shop_pay_cancelled'));
-        go('menu');
+        showFailed(T('shop_pay_cancelled'));
       }
     } catch (e) {}
   }, 4000);
+}
+
+// Persistent "payment not completed" screen — stays until the customer
+// dismisses it themselves (no auto-timer). Cart is left intact to retry.
+function showFailed(msg) {
+  $('#failMsg').innerHTML = msg || T('shop_pay_cancelled');
+  go('failed');
+}
+function retryPayment() {
+  go('checkout');
 }
 
 // ─── Orders ───
