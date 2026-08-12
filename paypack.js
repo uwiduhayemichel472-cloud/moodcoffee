@@ -77,6 +77,20 @@ async function cashin({ amount, phone, idempotencyKey }) {
   return j;
 }
 
+/**
+ * Request a CASHOUT (money out). Moves money from the merchant wallet to a
+ * mobile money number (e.g. the admin's own MTN/Airtel number). Returns the
+ * transaction record incl. its `ref`.
+ */
+async function cashout({ amount, phone, idempotencyKey }) {
+  const j = await pk('transactions/cashout', 'POST', {
+    amount: Math.max(1, Math.round(Number(amount))),
+    number: rwNumber(phone)
+  }, idempotencyKey);
+  if (!j.ref) throw new Error('Payment service: Paypack did not return a reference.');
+  return j;
+}
+
 /** Look up a transaction by its Paypack ref. status: pending/successful/failed. */
 async function find(ref) {
   return pk('transactions/find/' + encodeURIComponent(String(ref)), 'GET');
@@ -89,4 +103,4 @@ function verifySignature(raw, sig) {
   return sig === expected;
 }
 
-module.exports = { configured, cashin, find, verifySignature };
+module.exports = { configured, cashin, cashout, find, verifySignature };

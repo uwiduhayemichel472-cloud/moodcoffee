@@ -8,7 +8,7 @@ const ALL_PERMS = [
   ['overview', 'Dashboard'], ['products', 'Products'], ['categories', 'Categories'], ['orders', 'Orders'],
   ['customers', 'Customers'], ['promos', 'Promo Codes'], ['settings', 'Settings'],
   ['notifications', 'Notifications'], ['announcements', 'Announcements'], ['reports', 'Reports'],
-  ['reviews', 'Reviews'], ['reservations', 'Reservations'], ['giftcards', 'Gift Cards']
+  ['reviews', 'Reviews'], ['reservations', 'Reservations'], ['giftcards', 'Gift Cards'], ['payouts', 'Withdrawals']
 ];
 const can = p => !!admin && (admin.isSuper || (admin.perms || []).includes(p));
 const permLabel = p => (ALL_PERMS.find(x => x[0] === p) || [p, p])[1];
@@ -144,8 +144,8 @@ function switchPanel(p) {
   else if (!can(p)) p = 'overview';
   panel = p;
   document.querySelectorAll('.nl').forEach(b => b.classList.toggle('active', b.dataset.p === p));
-  $('title').textContent = { overview: 'Dashboard', products: 'Products', categories: 'Categories', orders: 'Orders', customers: 'Customers', promos: 'Promo Codes', settings: 'Settings', images: 'Site Images', notifications: 'Notifications', announcements: 'Announcements', reports: 'Reports', reviews: 'Reviews', reservations: 'Reservations', giftcards: 'Gift Cards', admins: 'Team & Admins' }[p] || 'Dashboard';
-  const L = { overview: loadOverview, products: loadProducts, categories: loadCategories, orders: loadOrders, customers: loadCustomers, promos: loadPromos, settings: loadSettings, images: loadImages, notifications: loadNotifs, announcements: loadAnnouncements, reports: loadReports, reviews: loadReviews, reservations: loadReservations, giftcards: loadGiftcards, admins: loadAdmins };
+  $('title').textContent = { overview: 'Dashboard', products: 'Products', categories: 'Categories', orders: 'Orders', customers: 'Customers', promos: 'Promo Codes', settings: 'Settings', images: 'Site Images', notifications: 'Notifications', announcements: 'Announcements', reports: 'Reports', reviews: 'Reviews', reservations: 'Reservations', giftcards: 'Gift Cards', payouts: 'Withdrawals', admins: 'Team & Admins' }[p] || 'Dashboard';
+  const L = { overview: loadOverview, products: loadProducts, categories: loadCategories, orders: loadOrders, customers: loadCustomers, promos: loadPromos, settings: loadSettings, images: loadImages, notifications: loadNotifs, announcements: loadAnnouncements, reports: loadReports, reviews: loadReviews, reservations: loadReservations, giftcards: loadGiftcards, payouts: loadPayouts, admins: loadAdmins };
   $('pan').innerHTML = '<div class="card2"><div class="bd" style="color:#999">Loading…</div></div>';
   L[p]().then(h => $('pan').innerHTML = h).catch(e => $('pan').innerHTML = `<div class="card2"><div class="bd" style="color:#c0392b">${esc(e.message)}</div></div>`);
 }
@@ -793,6 +793,55 @@ function delGc(id) {
     try { await api('/api/admin/giftcards/' + id, { method: 'DELETE' }); loadGiftcards().then(h => $('pan').innerHTML = h); toast('Deleted'); }
     catch (e) { toast(e.message); }
   });
+}
+
+/* ---------------- Withdrawals (Paypack cashout) ---------------- */
+async function loadPayouts() {
+  const p = await api('/api/admin/payouts');
+  return `
+  <div class="toolbar"><span style="font-size:.82rem;color:#7a5c44">Withdraw money from your Paypack wallet to a mobile money number (MTN MoMo / Airtel Money / Tigo Cash).</span></div>
+  <div class="grid2">
+    <div class="card2"><div class="hd"><b>Withdraw to mobile money</b></div><div class="bd">
+      <div class="fg"><label>Amount (RWF) *<input id="coAmt" type="number" min="100" step="50" placeholder="e.g. 5000"></label></div>
+      <div class="fg"><label>Mobile money number *<input id="coPhone" placeholder="e.g. 0788123456"></label></div>
+      <button class="gold" style="max-width:240px" onclick="doPayout()">Withdraw</button>
+    </div></div>
+    <div class="card2"><div class="hd"><b>History</b></div><div class="bd" style="padding:0">
+      <table><tr><th>Ref</th><th>Number</th><th>Amount</th><th>Status</th><th>When</th><th></th></tr>
+      ${p.map(x => `<tr>
+        <td><b>${esc(x.ref || '—')}</b></td>
+        <td>${esc(x.phone || '—')}</td>
+        <td>${money(x.amount)}</td>
+        <td><span class="bdg ${x.status === 'successful' ? 'on' : (x.status === 'failed' ? 'off' : '')}">${esc(x.status || x.event)}</span></td>
+        <td style="font-size:.74rem">${dt(x.created_at)}</td>
+        <td><button class="a-btn" onclick="checkPayout('${esc(x.ref || '')}',this)">Refresh</button></td>
+      </tr>`).join('') || '<tr><td colspan="6" style="color:#888;text-align:center;padding:30px">No withdrawals yet.</td></tr>'}
+      </table></div></div>
+  </div>`;
+}
+function doPayout() {
+  const amt = Number($('coAmt').value);
+  const phone = $('coPhone').value.trim();
+  if (!amt || amt < 100) { toast('Enter an amount of at least 100 RWF.'); return; }
+  if (!phone) { toast('Enter the mobile money number to receive the money.'); return; }
+  confirm(`Withdraw ${money(amt)} to ${phone}? This sends real money from your Paypack wallet.`, async () => {
+    try {
+      const r = await api('/api/admin/payouts', { method: 'POST', body: JSON.stringify({ amount: amt, phone }) });
+      toast('Withdrawal request sent (ref ' + r.ref + ')');
+      loadPayouts().then(h => $('pan').innerHTML = h);
+    } catch (e) { toast(e.message); }
+  });
+}
+async function checkPayout(ref, el) {
+  if (!ref) { toast('No Paypack reference yet.'); return; }
+  try {
+    const r = await api('/api/admin/payouts/' + encodeURIComponent(ref));
+    if (el) {
+      const b = el.closest('tr').querySelector('.bdg');
+      if (b) { b.className = 'bdg ' + (r.status === 'successful' ? 'on' : (r.status === 'failed' ? 'off' : '')); b.textContent = r.status; }
+    }
+    toast('Status: ' + r.status);
+  } catch (e) { toast(e.message); }
 }
 
 /* ---------------- Team & Admins (super admin only) ---------------- */

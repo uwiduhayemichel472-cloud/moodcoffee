@@ -2,6 +2,7 @@
 const express = require('express');
 const { q } = require('./db.js');
 const H = require('./helpers.js');
+const paypack = require('./paypack.js');
 
 const r = express.Router();
 const money = v => Number(v || 0).toFixed(2);
@@ -74,7 +75,7 @@ r.get('/me', H.requireAdmin, (req, res) => res.json({ admin: req.admin }));
 // ---------- Protected routes below ----------
 r.use(H.requireAdmin);
 
-const ALL_PERMS = ['overview', 'products', 'categories', 'orders', 'customers', 'promos', 'settings', 'notifications', 'announcements', 'reports', 'reviews', 'reservations', 'giftcards'];
+const ALL_PERMS = ['overview', 'products', 'categories', 'orders', 'customers', 'promos', 'settings', 'notifications', 'announcements', 'reports', 'reviews', 'reservations', 'giftcards', 'payouts'];
 function perm(...keys) {
   return (req, res, next) => {
     if (req.admin.isSuper) return next();
@@ -629,6 +630,46 @@ r.get('/export/:type', perm('reports'), async (req, res) => {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=' + t + '.csv');
     res.send(csv);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ---------- Paypack withdrawals (cashout) ----------
+r.get('/payouts', perm('payouts'), async (req, res) => {
+  try {
+    const rows = await q(`SELECT * FROM payment_events WHERE gateway='paypack' AND event LIKE 'cashout%' ORDER BY created_at DESC LIMIT 100`);
+    res.json(rows.map(x => ({
+      id: x.id, ref: x.gw_ref, phone: x.client, amount: Number(x.amount),
+      status: x.status, event: x.event, created_at: x.created_at
+    })));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+r.post('/payouts', perm('payouts'), async (req, res) => {
+  try {
+    const amount = Number(req.body.amount);
+    const phone = String(req.body.phone || '').replace(/[\s-]/g, '');
+    if (!paypack.configured())
+      return res.status(400).json({ error: 'Paypack is not configured. Add PAYPACK_CLIENT_ID and PAYPACK_CLIENT_SECRET.' });
+    if (isNaN(amount) || amount < 100)
+      return res.status(400).json({ error: 'Enter an amount of at least 100 RWF.' });
+    if (!(/^07\d{8}$/.test(phone) || /^(\+?250)7\d{8}$/.test(phone)))
+      return res.status(400).json({ error: 'Enter a valid mobile money number (e.g. 0788123456).' });
+    const t = await paypack.cashout({ amount, phone });
+    await q('INSERT INTO payment_events (order_ref,gateway,gw_ref,event,status,amount,client) VALUES (NULL,?,?,?,?,?,?)',
+      ['paypack', String(t.ref), 'cashout_created', String(t.status || 'pending'), amount, phone]);
+    H.notify('Paypack cashout ' + t.ref + ' — ' + money(amount) + ' to ' + phone);
+    res.json({ ref: t.ref, status: t.status || 'pending', amount });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+r.get('/payouts/:ref', perm('payouts'), async (req, res) => {
+  try {
+    const t = await paypack.find(req.params.ref);
+    const st = String(t.status || 'pending');
+    const ev = st === 'successful' ? 'cashout_successful' : (st === 'failed' ? 'cashout_failed' : 'cashout_created');
+    await q(`UPDATE payment_events SET status=?, event=? WHERE gw_ref=? AND event='cashout_created'`,
+      [st, ev, req.params.ref]);
+    res.json({ ref: req.params.ref, status: st });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
