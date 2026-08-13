@@ -90,6 +90,32 @@ async function main() {
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_order (order_ref)
   ) ENGINE=InnoDB`);
+  await conn.query(`CREATE TABLE IF NOT EXISTS wallet_tx (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tx_type VARCHAR(8) NOT NULL,
+    method VARCHAR(16) NOT NULL DEFAULT 'cash',
+    amount DECIMAL(10,2) NOT NULL,
+    note VARCHAR(255) DEFAULT '',
+    ref VARCHAR(40) DEFAULT NULL,
+    status VARCHAR(20) DEFAULT 'successful',
+    created_by INT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_type (tx_type),
+    INDEX idx_method (method),
+    INDEX idx_ref (ref),
+    INDEX idx_created (created_at)
+  ) ENGINE=InnoDB`);
+  await conn.query(`CREATE TABLE IF NOT EXISTS ai_chats (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    role VARCHAR(10) NOT NULL DEFAULT 'customer',
+    user_id INT DEFAULT NULL,
+    query VARCHAR(300) NOT NULL,
+    intent VARCHAR(40) DEFAULT '',
+    answer VARCHAR(1500) DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_role (role),
+    INDEX idx_created (created_at)
+  ) ENGINE=InnoDB`);
 
   console.log('Adding new columns (if missing)…');
   await addCol(conn, 'customers', 'points INT NOT NULL DEFAULT 0');

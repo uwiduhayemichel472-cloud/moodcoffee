@@ -3,6 +3,8 @@ const express = require('express');
 const { q } = require('./db.js');
 const H = require('./helpers.js');
 const paypack = require('./paypack.js');
+const wallet = require('./wallet.js');
+const ai = require('./ai.js');
 
 const r = express.Router();
 const money = v => Number(v || 0).toFixed(2);
@@ -71,6 +73,16 @@ r.post('/change-password', H.requireAdmin, async (req, res) => {
 });
 
 r.get('/me', H.requireAdmin, (req, res) => res.json({ admin: req.admin }));
+
+// ---------- AI assistant (admin side) ----------
+r.post('/ai/chat', H.requireAdmin, perm('overview'), async (req, res) => {
+  try {
+    if (!H.rateLimit(req.ip, 'adm-ai', 60, 60000))
+      return res.status(429).json({ error: 'Too many messages in a row. Take a breath! ☕' });
+    const r = await ai.chat({ role: 'admin', input: String(req.body.message || req.body.query || ''), user: { id: req.admin.id, name: req.admin.name } });
+    res.json(r);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 // ---------- Protected routes below ----------
 r.use(H.requireAdmin);
@@ -238,8 +250,14 @@ r.put('/orders/:id', perm('orders'), async (req, res) => {
   try {
     const st = String(req.body.status || '');
     if (!VALID_STATUS.includes(st)) return res.status(400).json({ error: 'Invalid status.' });
+    const rows = await q('SELECT ref,payment,total FROM orders WHERE id=?', [Number(req.params.id)]);
+    if (!rows.length) return res.status(404).json({ error: 'Order not found.' });
     await q('UPDATE orders SET status=? WHERE id=?', [st, Number(req.params.id)]);
     H.notify('Order ' + req.params.id + ' → ' + st);
+    // Cash-on-delivery: the money actually arrives when the order is delivered.
+    const o = rows[0];
+    if (st === 'Delivered' && o.payment === 'cash' && !(await wallet.hasLog(o.ref, 'in')))
+      await wallet.logIn({ ref: o.ref, method: 'cash', amount: Number(o.total), note: 'Cash on delivery — ' + o.ref, by: req.admin.id });
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -633,6 +651,89 @@ r.get('/export/:type', perm('reports'), async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ---------- Wallet / money control panel ----------
+const VALID_IN = wallet.VALID_IN, VALID_OUT = wallet.VALID_OUT;
+const METHOD_LABEL = {
+  mtn: 'MTN MoMo', airtel: 'Airtel Money', tigo: 'Tigo Cash', card: 'Card', cash: 'Cash',
+  paypal: 'PayPal', bank: 'Bank', paypack: 'Paypack', manual: 'Manual'
+};
+const cleanAmt = v => Math.round(Number(v) * 100) / 100;
+
+// Wallet summary: balance, totals in/out, breakdown by method, recent ledger.
+r.get('/wallet', perm('paypack'), async (req, res) => {
+  try {
+    const [sum, byIn, byOut, list] = await Promise.all([
+      wallet.summary(),
+      wallet.byMethod({ txType: 'in' }),
+      wallet.byMethod({ txType: 'out' }),
+      wallet.list({ limit: 100 })
+    ]);
+    const rows = list.map(w => ({
+      id: w.id, type: w.tx_type, method: w.method, methodLabel: METHOD_LABEL[w.method] || w.method,
+      amount: Number(w.amount), note: w.note, ref: w.ref, status: w.status,
+      recordedBy: w.recorded_by, createdBy: w.created_by, created_at: w.created_at
+    }));
+    res.json({
+      balance: sum.balance, moneyIn: sum.in, moneyOut: sum.out, nIn: sum.nIn, nOut: sum.nOut,
+      byIn: byIn.map(b => ({ ...b, label: METHOD_LABEL[b.method] || b.method })),
+      byOut: byOut.map(b => ({ ...b, label: METHOD_LABEL[b.method] || b.method })),
+      methods: { in: VALID_IN, out: VALID_OUT },
+      list: rows
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Record money received (counter sales, cash on delivery, card settlement…).
+r.post('/wallet/in', perm('paypack'), async (req, res) => {
+  try {
+    const method = String(req.body.method || 'cash');
+    const amount = cleanAmt(req.body.amount);
+    if (!VALID_IN.includes(method)) return res.status(400).json({ error: 'Choose a valid money-in method.' });
+    if (isNaN(amount) || amount <= 0) return res.status(400).json({ error: 'Enter a valid amount.' });
+    const note = String(req.body.note || 'Money received — ' + (METHOD_LABEL[method] || method)).slice(0, 255);
+    const ref = String(req.body.ref || '').trim().slice(0, 40) || null;
+    const id = await wallet.logIn({ ref, method, amount, note, status: 'successful', by: req.admin.id });
+    H.notify('Money in: ' + money(amount) + ' (' + (METHOD_LABEL[method] || method) + ')');
+    res.json({ ok: true, id });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Record money spent (expenses, supplier payments, refunds, manual cashout…).
+r.post('/wallet/out', perm('paypack'), async (req, res) => {
+  try {
+    const method = String(req.body.method || 'cash');
+    const amount = cleanAmt(req.body.amount);
+    if (!VALID_OUT.includes(method)) return res.status(400).json({ error: 'Choose a valid money-out method.' });
+    if (isNaN(amount) || amount <= 0) return res.status(400).json({ error: 'Enter a valid amount.' });
+    const note = String(req.body.note || 'Money paid out — ' + (METHOD_LABEL[method] || method)).slice(0, 255);
+    const ref = String(req.body.ref || '').trim().slice(0, 40) || null;
+    const id = await wallet.logOut({ ref, method, amount, note, status: 'successful', by: req.admin.id });
+    H.notify('Money out: ' + money(amount) + ' (' + (METHOD_LABEL[method] || method) + ')');
+    res.json({ ok: true, id });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Delete a manual ledger entry (only entries the admin created).
+r.delete('/wallet/:id', perm('paypack'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ error: 'Missing entry id.' });
+    const rows = await q('SELECT id FROM wallet_tx WHERE id=? AND created_by=?', [id, req.admin.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Entry not found or not created by you.' });
+    await q('DELETE FROM wallet_tx WHERE id=?', [id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// CSV export of the full money ledger.
+r.get('/wallet/export', perm('paypack'), async (req, res) => {
+  try {
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=wallet.csv');
+    res.send(await wallet.csv());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ---------- Paypack payments (live transactions, mirrors the Paypack dashboard) ----------
 r.get('/paypack', perm('paypack'), async (req, res) => {
   try {
@@ -683,6 +784,8 @@ r.post('/payouts', perm('payouts'), async (req, res) => {
     const t = await paypack.cashout({ amount, phone });
     await q('INSERT INTO payment_events (order_ref,gateway,gw_ref,event,status,amount,client) VALUES (NULL,?,?,?,?,?,?)',
       ['paypack', String(t.ref), 'cashout_created', String(t.status || 'pending'), amount, phone]);
+    // Record it in the wallet ledger as money-out (matches the Paypack wallet).
+    await wallet.logOut({ ref: String(t.ref), method: 'paypack', amount, note: 'Paypack cashout to ' + phone, status: String(t.status || 'pending'), by: req.admin.id });
     H.notify('Paypack cashout ' + t.ref + ' — ' + money(amount) + ' to ' + phone);
     res.json({ ref: t.ref, status: t.status || 'pending', amount });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -695,6 +798,7 @@ r.get('/payouts/:ref', perm('payouts'), async (req, res) => {
     const ev = st === 'successful' ? 'cashout_successful' : (st === 'failed' ? 'cashout_failed' : 'cashout_created');
     await q(`UPDATE payment_events SET status=?, event=? WHERE gw_ref=? AND event='cashout_created'`,
       [st, ev, req.params.ref]);
+    await q('UPDATE wallet_tx SET status=? WHERE ref=? AND method=?', [st, String(req.params.ref).slice(0, 40), 'paypack']);
     res.json({ ref: req.params.ref, status: st });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

@@ -8,6 +8,8 @@ const H = require('./helpers.js');
 const mailer = require('./mailer.js');
 const pay = require('./payment.js');
 const paypack = require('./paypack.js');
+const wallet = require('./wallet.js');
+const ai = require('./ai.js');
 
 const app = express();
 // Keep the raw body so the Flutterwave webhook signature (HMAC over the raw
@@ -557,6 +559,12 @@ async function confirmPaidOrder(ref, txId, maxTries = 1) {
   } catch (e) { try { conn.rollback(); } catch (_) {} }
   finally { conn.release(); }
   H.notify('Payment received: order ' + ref + ' — ' + currency + ' ' + Number(o.total).toFixed(2));
+  // Record the money-in in the wallet ledger (idempotent — only once per order).
+  try {
+    const wm = ['mtn', 'airtel', 'card', 'cash'].includes(o.payment) ? o.payment : 'cash';
+    if (!(await wallet.hasLog(o.ref, 'in')))
+      await wallet.logIn({ ref: o.ref, method: wm, amount: Number(o.total), note: 'Order ' + ref + ' paid', by: null });
+  } catch (e) { /* ledger logging must never break payment confirmation */ }
   try {
     if (st.smtp && st.smtp.user) {
       const cust = await q('SELECT email,name FROM customers WHERE id=?', [o.user_id]);
@@ -891,6 +899,19 @@ app.get('/api/trending', async (req, res) => {
         WHERE p.available=1 ORDER BY p.featured DESC, p.id LIMIT 8`);
     }
     res.json({ trending: rows.map(p => ({ id: p.id, cat: p.cat, name: p.name, price: Number(p.price), emoji: p.emoji, img: p.image, sold: Number(p.sold) || 0 })) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── AI assistant (customer side) ──────────────────
+app.post('/api/ai/chat', async (req, res) => {
+  try {
+    if (!H.rateLimit(req.ip, 'ai', 30, 60000))
+      return res.status(429).json({ error: 'Too many messages in a row. Take a breath! ☕' });
+    let user = null;
+    const s = await H.getSession(req, 'customer');
+    if (s) { const u = await q('SELECT id,name,points FROM customers WHERE id=?', [s.id]); if (u.length) user = u[0]; }
+    const r = await ai.chat({ role: 'customer', input: String(req.body.message || req.body.query || ''), user });
+    res.json(r);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

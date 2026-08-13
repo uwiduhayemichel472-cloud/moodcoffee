@@ -8,7 +8,7 @@ const ALL_PERMS = [
   ['overview', 'Dashboard'], ['products', 'Products'], ['categories', 'Categories'], ['orders', 'Orders'],
   ['customers', 'Customers'], ['promos', 'Promo Codes'], ['settings', 'Settings'],
   ['notifications', 'Notifications'], ['announcements', 'Announcements'], ['reports', 'Reports'],
-  ['reviews', 'Reviews'], ['reservations', 'Reservations'], ['giftcards', 'Gift Cards'], ['payouts', 'Withdrawals'], ['paypack', 'Payments']
+  ['reviews', 'Reviews'], ['reservations', 'Reservations'], ['giftcards', 'Gift Cards'], ['payouts', 'Withdrawals'], ['paypack', 'Money']
 ];
 const can = p => !!admin && (admin.isSuper || (admin.perms || []).includes(p));
 const permLabel = p => (ALL_PERMS.find(x => x[0] === p) || [p, p])[1];
@@ -144,8 +144,8 @@ function switchPanel(p) {
   else if (!can(p)) p = 'overview';
   panel = p;
   document.querySelectorAll('.nl').forEach(b => b.classList.toggle('active', b.dataset.p === p));
-  $('title').textContent = { overview: 'Dashboard', products: 'Products', categories: 'Categories', orders: 'Orders', customers: 'Customers', promos: 'Promo Codes', settings: 'Settings', images: 'Site Images', notifications: 'Notifications', announcements: 'Announcements', reports: 'Reports', reviews: 'Reviews', reservations: 'Reservations', giftcards: 'Gift Cards', payouts: 'Withdrawals', paypack: 'Payments', admins: 'Team & Admins' }[p] || 'Dashboard';
-  const L = { overview: loadOverview, products: loadProducts, categories: loadCategories, orders: loadOrders, customers: loadCustomers, promos: loadPromos, settings: loadSettings, images: loadImages, notifications: loadNotifs, announcements: loadAnnouncements, reports: loadReports, reviews: loadReviews, reservations: loadReservations, giftcards: loadGiftcards, payouts: loadPayouts, paypack: loadPaypack, admins: loadAdmins };
+  $('title').textContent = { overview: 'Dashboard', products: 'Products', categories: 'Categories', orders: 'Orders', customers: 'Customers', promos: 'Promo Codes', settings: 'Settings', images: 'Site Images', notifications: 'Notifications', announcements: 'Announcements', reports: 'Reports', reviews: 'Reviews', reservations: 'Reservations', giftcards: 'Gift Cards', payouts: 'Withdrawals', paypack: 'Money', ai: 'AI Assistant', admins: 'Team & Admins' }[p] || 'Dashboard';
+  const L = { overview: loadOverview, products: loadProducts, categories: loadCategories, orders: loadOrders, customers: loadCustomers, promos: loadPromos, settings: loadSettings, images: loadImages, notifications: loadNotifs, announcements: loadAnnouncements, reports: loadReports, reviews: loadReviews, reservations: loadReservations, giftcards: loadGiftcards, payouts: loadPayouts, paypack: loadMoney, ai: loadAi, admins: loadAdmins };
   $('pan').innerHTML = '<div class="card2"><div class="bd" style="color:#999">Loading…</div></div>';
   L[p]().then(h => $('pan').innerHTML = h).catch(e => $('pan').innerHTML = `<div class="card2"><div class="bd" style="color:#c0392b">${esc(e.message)}</div></div>`);
 }
@@ -854,19 +854,142 @@ async function checkPayout(ref, el) {
   } catch (e) { toast(e.message); }
 }
 
-/* ---------------- Paypack Payments (live from Paypack dashboard) ---------------- */
-async function loadPaypack() {
+/* ---------------- Money control panel (wallet + Paypack live) ---------------- */
+let moneyTabActive = 'overview';
+const METHOD_LBL = { mtn: 'MTN MoMo', airtel: 'Airtel Money', tigo: 'Tigo Cash', card: 'Card', cash: 'Cash', paypal: 'PayPal', bank: 'Bank', paypack: 'Paypack', manual: 'Manual' };
+
+async function loadMoney() {
+  return `
+  <div class="toolbar" style="flex-wrap:wrap;gap:8px">
+    <button class="a-btn ${moneyTabActive === 'overview' ? 'gold' : ''}" onclick="moneyTab('overview')">Overview</button>
+    <button class="a-btn ${moneyTabActive === 'record' ? 'gold' : ''}" onclick="moneyTab('record')">Record money in / out</button>
+    <button class="a-btn ${moneyTabActive === 'ledger' ? 'gold' : ''}" onclick="moneyTab('ledger')">Ledger</button>
+    <button class="a-btn ${moneyTabActive === 'paypack' ? 'gold' : ''}" onclick="moneyTab('paypack')">Paypack live</button>
+  </div>
+  <div id="moneyBody">${moneyTabActive === 'overview' ? '<div class="card2"><div class="bd" style="color:#999">Loading…</div></div>' : ''}</div>`;
+}
+
+function moneyTab(t) {
+  moneyTabActive = t;
+  loadMoney().then(h => $('pan').innerHTML = h);
+  moneyLoadTab();
+}
+async function moneyLoadTab() {
+  const b = $('moneyBody');
+  if (!b) return;
+  if (moneyTabActive === 'record') { b.innerHTML = moneyRecordHtml(); return; }
+  if (moneyTabActive === 'paypack') { moneyPaypackHtml().then(h => b.innerHTML = h); return; }
+  const d = await api('/api/admin/wallet');
+  if (moneyTabActive === 'overview') b.innerHTML = moneyOverviewHtml(d);
+  else b.innerHTML = moneyLedgerHtml(d);
+}
+
+function moneyOverviewHtml(d) {
+  return `
+  <div class="kpis">
+    <div class="kpi" style="background:linear-gradient(135deg,#2e7d32,#1b5e20);color:#fff"><b>${money(d.balance)}</b><span>Wallet balance</span></div>
+    <div class="kpi"><b>${money(d.moneyIn)}</b><span>Money in</span></div>
+    <div class="kpi"><b style="color:#c0392b">${money(d.moneyOut)}</b><span>Money out</span></div>
+    <div class="kpi"><b>${d.nIn + d.nOut}</b><span>Ledger entries</span></div>
+  </div>
+  <div class="grid2">
+    <div class="card2"><div class="hd"><b>Money in — by method</b></div><div class="bd">
+      ${d.byIn.length ? d.byIn.map(m => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0ece8;font-size:.84rem"><span>${esc(m.label)} <small style="color:#7a5c44">(${m.count})</small></span><b style="color:#2e7d32">${money(m.amount)}</b></div>`).join('') : '<p style="color:#888">No money-in recorded yet.</p>'}
+    </div></div>
+    <div class="card2"><div class="hd"><b>Money out — by method</b></div><div class="bd">
+      ${d.byOut.length ? d.byOut.map(m => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0ece8;font-size:.84rem"><span>${esc(m.label)} <small style="color:#7a5c44">(${m.count})</small></span><b style="color:#c0392b">${money(m.amount)}</b></div>`).join('') : '<p style="color:#888">No money-out recorded yet.</p>'}
+    </div></div>
+  </div>
+  <div class="card2"><div class="bd" style="font-size:.78rem;color:#7a5c44">Paid orders are added automatically as money-in; Paypack cashouts are added automatically as money-out. Use "Record money in / out" for counter cash, expenses and anything else. The balance is money-in minus money-out.</div></div>`;
+}
+
+function moneyRecordHtml() {
+  return `
+  <div class="grid2">
+    <div class="card2" style="border-color:#2e7d32"><div class="hd"><b style="color:#2e7d32">↓ Money in (received)</b></div><div class="bd">
+      <div class="fg"><label>Method *</label><select id="wiM">
+        <option value="mtn">MTN MoMo</option><option value="airtel">Airtel Money</option>
+        <option value="tigo">Tigo Cash</option><option value="card">Card (Flutterwave)</option>
+        <option value="cash" selected>Cash on delivery / counter</option><option value="paypal">PayPal</option>
+      </select></div>
+      <div class="fg"><label>Amount *</label><input id="wiAmt" type="number" min="0" step="0.01" placeholder="e.g. 5000"></div>
+      <div class="fg"><label>Note</label><input id="wiNote" placeholder="e.g. Counter sale, delivery payment…"></div>
+      <div class="fg"><label>Reference (optional)</label><input id="wiRef" placeholder="e.g. MD-…, invoice no."></div>
+      <button class="gold" style="max-width:240px" onclick="recordMoney('in')">Record money in</button>
+    </div></div>
+    <div class="card2" style="border-color:#c0392b"><div class="hd"><b style="color:#c0392b">↑ Money out (spent)</b></div><div class="bd">
+      <div class="fg"><label>Method *</label><select id="woM">
+        <option value="cash" selected>Cash</option><option value="airtel">Airtel Money</option>
+        <option value="mtn">MTN MoMo</option><option value="card">Card</option><option value="bank">Bank</option>
+        <option value="paypack">Paypack (wallet cashout)</option><option value="manual">Manual / other</option>
+      </select></div>
+      <div class="fg"><label>Amount *</label><input id="woAmt" type="number" min="0" step="0.01" placeholder="e.g. 5000"></div>
+      <div class="fg"><label>Note</label><input id="woNote" placeholder="e.g. Supplier, refund, fuel…"></div>
+      <div class="fg"><label>Reference (optional)</label><input id="woRef" placeholder="e.g. invoice no."></div>
+      <button class="gold" style="max-width:240px;background:#c0392b" onclick="recordMoney('out')">Record money out</button>
+      <p style="font-size:.74rem;color:#7a5c44;margin:8px 0 0">For a real Paypack cashout (money leaving your Paypack wallet to mobile money) use the Withdrawals tab instead — it is recorded here automatically.</p>
+    </div></div>
+  </div>`;
+}
+
+function moneyLedgerHtml(d) {
+  const st = s => '<span class="bdg ' + (s === 'successful' ? 'on' : (s === 'failed' ? 'off' : '')) + '">' + esc(s || '—') + '</span>';
+  return `
+  <div class="toolbar">
+    <span style="font-size:.82rem;color:#7a5c44">Every money movement, newest first.</span>
+    <button class="a-btn" onclick="location='/api/admin/wallet/export'">⬇ Export CSV</button>
+  </div>
+  <div class="card2"><div class="bd" style="padding:0">
+    <table><tr><th>When</th><th>Type</th><th>Method</th><th>Amount</th><th>Note</th><th>Ref</th><th>Status</th><th>By</th><th></th></tr>
+    ${d.list.map(w => `<tr>
+      <td style="font-size:.74rem">${dt(w.created_at)}</td>
+      <td><span class="bdg ${w.type === 'in' ? 'on' : 'off'}">${w.type === 'in' ? 'In' : 'Out'}</span></td>
+      <td>${esc(w.methodLabel || w.method)}</td>
+      <td><b style="color:${w.type === 'in' ? '#2e7d32' : '#c0392b'}">${w.type === 'in' ? '+' : '−'}${money(w.amount)}</b></td>
+      <td style="max-width:240px;font-size:.78rem">${esc(w.note) || '—'}</td>
+      <td style="font-size:.74rem">${esc(w.ref || '—')}</td>
+      <td>${st(w.status)}</td>
+      <td style="font-size:.74rem">${esc(w.recordedBy || 'auto')}</td>
+      <td>${w.createdBy && w.createdBy === admin.id ? `<button class="a-btn red" onclick="delWallet(${w.id})">✕</button>` : ''}</td>
+    </tr>`).join('') || '<tr><td colspan="9" style="color:#888;text-align:center;padding:30px">No ledger entries yet. Record money in/out or take a payment to get started.</td></tr>'}
+    </table></div></div>`;
+}
+
+async function recordMoney(dir) {
+  const isIn = dir === 'in';
+  const m = $(isIn ? 'wiM' : 'woM').value;
+  const amt = Number($(isIn ? 'wiAmt' : 'woAmt').value);
+  const note = $(isIn ? 'wiNote' : 'woNote').value;
+  const ref = $(isIn ? 'wiRef' : 'woRef').value;
+  if (!amt || amt <= 0) { toast('Enter a valid amount.'); return; }
+  confirm(`${isIn ? 'Record' : 'Record'} ${money(amt)} money-${isIn ? 'in' : 'out'} (${esc(METHOD_LBL[m] || m)})?`, async () => {
+    try {
+      await api('/api/admin/wallet/' + (isIn ? 'in' : 'out'), { method: 'POST', body: JSON.stringify({ method: m, amount: amt, note, ref }) });
+      toast('Recorded');
+      moneyTab('overview');
+    } catch (e) { toast(e.message); }
+  });
+}
+function delWallet(id) {
+  confirm('Delete this ledger entry? (only entries you recorded)', async () => {
+    try {
+      await api('/api/admin/wallet/' + id, { method: 'DELETE' });
+      toast('Deleted');
+      moneyTab('ledger');
+    } catch (e) { toast(e.message); }
+  });
+}
+
+async function moneyPaypackHtml() {
   const r = await api('/api/admin/paypack?limit=100');
   const list = r.list || [];
   const st = s => '<span class="bdg ' + (s === 'successful' ? 'on' : (s === 'failed' ? 'off' : '')) + '">' + esc(s || '—') + '</span>';
   return `
-  <div class="toolbar"><span style="font-size:.82rem;color:#7a5c44">Live from Paypack — same data as your Paypack dashboard. Click refresh to pull the latest events.</span>
-    <button class="a-btn" onclick="loadPaypack().then(h=>$('pan').innerHTML=h)">Refresh</button></div>
   <div class="grid2">
     <div class="card2"><div class="hd"><b>Received (successful money-in)</b></div><div class="bd" style="font-size:1.5rem;color:#2e7d32">${money(r.received)}</div></div>
     <div class="card2"><div class="hd"><b>Sent (successful money-out)</b></div><div class="bd" style="font-size:1.5rem;color:#c0392b">${money(r.sent)}</div></div>
   </div>
-  <div class="card2"><div class="hd"><b>All transactions</b></div><div class="bd" style="padding:0">
+  <div class="card2"><div class="hd"><b>All transactions (live from Paypack)</b></div><div class="bd" style="padding:0">
     <table><tr><th>Ref</th><th>Type</th><th>Number</th><th>Amount</th><th>Provider</th><th>Status</th><th>Created</th></tr>
     ${list.map(t => `<tr>
       <td><b>${esc(t.ref || '—')}</b></td>
@@ -878,6 +1001,44 @@ async function loadPaypack() {
       <td style="font-size:.74rem">${dt(t.created_at)}</td>
     </tr>`).join('') || '<tr><td colspan="7" style="color:#888;text-align:center;padding:30px">No transactions yet.</td></tr>'}
     </table></div></div>`;
+}
+
+/* ---------------- AI Assistant (admin) ---------------- */
+let aiMsgs = [];
+const AI_SUGGEST = ['Who is the latest customer?', 'How much did we earn today?', 'What new orders do we have?', 'What are our best sellers?', 'Give me insights'];
+
+async function loadAi() {
+  if (!aiMsgs.length) aiMsgs = [{ from: 'ai', text: '👋 Hi ' + (admin ? admin.name : '') + '! Ask me anything about your shop — the latest customer, today\'s earnings, new orders, best sellers, insights and more.' }];
+  return `
+  <div class="toolbar"><span style="font-size:.82rem;color:#7a5c44">Your data, plain language. I answer from the live database — nothing is sent outside your server.</span></div>
+  <div class="ai-chat">
+    <div class="ai-msgs" id="aiMsgs">${aiMsgs.map(m => aiBubble(m)).join('')}</div>
+    <div class="ai-suggest">${AI_SUGGEST.map(s => `<button class="chip" onclick="aiSend('${s.replace(/'/g, "\\'")}',true)">${esc(s)}</button>`).join('')}</div>
+    <div class="ai-in">
+      <input id="aiIn" placeholder="Ask about orders, customers, money…" onkeydown="if(event.key==='Enter')aiSend()">
+      <button class="gold" onclick="aiSend()">Send</button>
+    </div>
+  </div>`;
+}
+function aiBubble(m) {
+  return `<div class="ai-msg ${m.from === 'me' ? 'me' : ''}"><div class="ai-txt">${esc(m.text).replace(/\n/g, '<br>')}</div></div>`;
+}
+async function aiSend(suggested, isSug) {
+  const inp = $('aiIn');
+  const txt = isSug ? suggested : (inp ? inp.value.trim() : '');
+  if (!txt) return;
+  aiMsgs.push({ from: 'me', text: txt });
+  const box = $('aiMsgs');
+  if (box) box.innerHTML = aiMsgs.map(aiBubble).join('');
+  if (inp) inp.value = '';
+  try {
+    const r = await api('/api/admin/ai/chat', { method: 'POST', body: JSON.stringify({ message: txt }) });
+    aiMsgs.push({ from: 'ai', text: r.answer });
+  } catch (e) {
+    aiMsgs.push({ from: 'ai', text: '⚠️ ' + e.message });
+  }
+  const b2 = $('aiMsgs');
+  if (b2) { b2.innerHTML = aiMsgs.map(aiBubble).join(''); b2.scrollTop = b2.scrollHeight; }
 }
 
 /* ---------------- Team & Admins (super admin only) ---------------- */

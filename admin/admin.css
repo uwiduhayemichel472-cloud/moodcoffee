@@ -183,3 +183,15 @@ select{appearance:auto}
   .chart{min-width:280px}
   .toast{left:12px;right:12px;bottom:12px;text-align:center}
 }
+
+/* AI chat (admin + customer widget) */
+.ai-chat{display:flex;flex-direction:column;gap:10px;height:calc(100vh - 230px);min-height:420px}
+.ai-msgs{flex:1;overflow-y:auto;background:#fff;border:1px solid #e8ddd3;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.ai-msg{display:flex}
+.ai-msg.me{justify-content:flex-end}
+.ai-txt{max-width:78%;padding:11px 14px;border-radius:14px;font-size:.84rem;line-height:1.65;background:#faf7f4;border:1px solid #e8ddd3;color:#2a1a0e;overflow-wrap:anywhere;white-space:pre-wrap}
+.ai-msg.me .ai-txt{background:linear-gradient(135deg,#5c2e0a,#7a4a12);color:#fff;border:none;border-bottom-right-radius:4px}
+.ai-msg:not(.me) .ai-txt{border-bottom-left-radius:4px}
+.ai-suggest{display:flex;flex-wrap:wrap;gap:8px}
+.ai-suggest .chip{cursor:pointer}
+.ai-suggest .chip:hover{border-color:#c8956c;background:#fff}
