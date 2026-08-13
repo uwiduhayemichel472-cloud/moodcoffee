@@ -180,13 +180,14 @@ async function loadOverview() {
   </table></div></div>`;
 }
 
-async function delFlag(id) {
-  if (!confirm('Remove this payment flag?')) return;
-  try {
-    await api('/api/admin/payflags/' + id, { method: 'DELETE' });
-    toast('Flag removed');
-    loadOverview().then(h => { if (panel === 'overview') $('pan').innerHTML = h; });
-  } catch (e) { toast(e.message); }
+function delFlag(id) {
+  confirm('Remove this payment flag?', async () => {
+    try {
+      await api('/api/admin/payflags/' + id, { method: 'DELETE' });
+      toast('Flag removed');
+      loadOverview().then(h => { if (panel === 'overview') $('pan').innerHTML = h; });
+    } catch (e) { toast(e.message); }
+  });
 }
 
 /* ---------------- Products ---------------- */
