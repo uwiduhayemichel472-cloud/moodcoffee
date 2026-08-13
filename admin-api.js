@@ -647,6 +647,18 @@ r.get('/paypack', perm('paypack'), async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Delete one payment flag (a payment_events row) from the dashboard.
+r.delete('/payflags/:id', perm('overview'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ error: 'Missing flag id.' });
+    const rows = await q('SELECT id FROM payment_events WHERE id=?', [id]);
+    if (!rows.length) return res.status(404).json({ error: 'Flag not found.' });
+    await q('DELETE FROM payment_events WHERE id=?', [id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ---------- Paypack withdrawals (cashout) ----------
 r.get('/payouts', perm('payouts'), async (req, res) => {
   try {
