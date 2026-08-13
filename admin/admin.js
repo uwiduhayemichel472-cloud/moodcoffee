@@ -8,7 +8,7 @@ const ALL_PERMS = [
   ['overview', 'Dashboard'], ['products', 'Products'], ['categories', 'Categories'], ['orders', 'Orders'],
   ['customers', 'Customers'], ['promos', 'Promo Codes'], ['settings', 'Settings'],
   ['notifications', 'Notifications'], ['announcements', 'Announcements'], ['reports', 'Reports'],
-  ['reviews', 'Reviews'], ['reservations', 'Reservations'], ['giftcards', 'Gift Cards'], ['payouts', 'Withdrawals']
+  ['reviews', 'Reviews'], ['reservations', 'Reservations'], ['giftcards', 'Gift Cards'], ['payouts', 'Withdrawals'], ['paypack', 'Payments']
 ];
 const can = p => !!admin && (admin.isSuper || (admin.perms || []).includes(p));
 const permLabel = p => (ALL_PERMS.find(x => x[0] === p) || [p, p])[1];
@@ -144,8 +144,8 @@ function switchPanel(p) {
   else if (!can(p)) p = 'overview';
   panel = p;
   document.querySelectorAll('.nl').forEach(b => b.classList.toggle('active', b.dataset.p === p));
-  $('title').textContent = { overview: 'Dashboard', products: 'Products', categories: 'Categories', orders: 'Orders', customers: 'Customers', promos: 'Promo Codes', settings: 'Settings', images: 'Site Images', notifications: 'Notifications', announcements: 'Announcements', reports: 'Reports', reviews: 'Reviews', reservations: 'Reservations', giftcards: 'Gift Cards', payouts: 'Withdrawals', admins: 'Team & Admins' }[p] || 'Dashboard';
-  const L = { overview: loadOverview, products: loadProducts, categories: loadCategories, orders: loadOrders, customers: loadCustomers, promos: loadPromos, settings: loadSettings, images: loadImages, notifications: loadNotifs, announcements: loadAnnouncements, reports: loadReports, reviews: loadReviews, reservations: loadReservations, giftcards: loadGiftcards, payouts: loadPayouts, admins: loadAdmins };
+  $('title').textContent = { overview: 'Dashboard', products: 'Products', categories: 'Categories', orders: 'Orders', customers: 'Customers', promos: 'Promo Codes', settings: 'Settings', images: 'Site Images', notifications: 'Notifications', announcements: 'Announcements', reports: 'Reports', reviews: 'Reviews', reservations: 'Reservations', giftcards: 'Gift Cards', payouts: 'Withdrawals', paypack: 'Payments', admins: 'Team & Admins' }[p] || 'Dashboard';
+  const L = { overview: loadOverview, products: loadProducts, categories: loadCategories, orders: loadOrders, customers: loadCustomers, promos: loadPromos, settings: loadSettings, images: loadImages, notifications: loadNotifs, announcements: loadAnnouncements, reports: loadReports, reviews: loadReviews, reservations: loadReservations, giftcards: loadGiftcards, payouts: loadPayouts, paypack: loadPaypack, admins: loadAdmins };
   $('pan').innerHTML = '<div class="card2"><div class="bd" style="color:#999">Loading…</div></div>';
   L[p]().then(h => $('pan').innerHTML = h).catch(e => $('pan').innerHTML = `<div class="card2"><div class="bd" style="color:#c0392b">${esc(e.message)}</div></div>`);
 }
@@ -842,6 +842,32 @@ async function checkPayout(ref, el) {
     }
     toast('Status: ' + r.status);
   } catch (e) { toast(e.message); }
+}
+
+/* ---------------- Paypack Payments (live from Paypack dashboard) ---------------- */
+async function loadPaypack() {
+  const r = await api('/api/admin/paypack?limit=100');
+  const list = r.list || [];
+  const st = s => '<span class="bdg ' + (s === 'successful' ? 'on' : (s === 'failed' ? 'off' : '')) + '">' + esc(s || '—') + '</span>';
+  return `
+  <div class="toolbar"><span style="font-size:.82rem;color:#7a5c44">Live from Paypack — same data as your Paypack dashboard. Click refresh to pull the latest events.</span>
+    <button class="a-btn" onclick="loadPaypack().then(h=>$('pan').innerHTML=h)">Refresh</button></div>
+  <div class="grid2">
+    <div class="card2"><div class="hd"><b>Received (successful money-in)</b></div><div class="bd" style="font-size:1.5rem;color:#2e7d32">${money(r.received)}</div></div>
+    <div class="card2"><div class="hd"><b>Sent (successful money-out)</b></div><div class="bd" style="font-size:1.5rem;color:#c0392b">${money(r.sent)}</div></div>
+  </div>
+  <div class="card2"><div class="hd"><b>All transactions</b></div><div class="bd" style="padding:0">
+    <table><tr><th>Ref</th><th>Type</th><th>Number</th><th>Amount</th><th>Provider</th><th>Status</th><th>Created</th></tr>
+    ${list.map(t => `<tr>
+      <td><b>${esc(t.ref || '—')}</b></td>
+      <td>${t.kind === 'CASHIN' ? 'Money in' : (t.kind === 'CASHOUT' ? 'Money out' : esc(t.kind || '—'))}</td>
+      <td>${esc(t.client || '—')}</td>
+      <td>${money(t.amount)}</td>
+      <td>${esc(String(t.provider || '—').toUpperCase())}</td>
+      <td>${st(t.status)}</td>
+      <td style="font-size:.74rem">${dt(t.created_at)}</td>
+    </tr>`).join('') || '<tr><td colspan="7" style="color:#888;text-align:center;padding:30px">No transactions yet.</td></tr>'}
+    </table></div></div>`;
 }
 
 /* ---------------- Team & Admins (super admin only) ---------------- */

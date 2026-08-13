@@ -108,6 +108,40 @@ async function find(ref) {
   return t;
 }
 
+/**
+ * List the most recent Paypack transactions (cashin + cashout) with their
+ * current status, fetched live from Paypack's events endpoint so the admin
+ * view matches the Paypack dashboard. Events arrive as separate created +
+ * processed records per transaction, so we dedupe by ref keeping the latest.
+ */
+async function transactions({ limit = 100, offset = 0, kind = '' } = {}) {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  if (kind) params.set('kind', kind);
+  const ev = await pk('events/transactions?' + params.toString(), 'GET');
+  const events = Array.isArray(ev.transactions) ? ev.transactions : [];
+  const byRef = new Map();
+  for (const e of events) {
+    const d = (e && e.data) || {};
+    if (!d.ref) continue;
+    const at = e.created_at || '';
+    const cur = byRef.get(d.ref);
+    if (!cur || at >= cur.updated_at) {
+      byRef.set(d.ref, {
+        ref: d.ref,
+        kind: String(d.kind || ''),
+        client: String(d.client || ''),
+        amount: Number(d.amount || 0),
+        provider: String(d.provider || ''),
+        status: String(d.status || ''),
+        created_at: d.created_at || at,
+        processed_at: d.processed_at || null,
+        updated_at: at
+      });
+    }
+  }
+  return [...byRef.values()];
+}
+
 /** Verify the x-paypack-signature header (base64 HMAC-SHA256 of the raw body). */
 function verifySignature(raw, sig) {
   if (!PK.webhookSecret) return true; // only enforced once a secret is configured
@@ -115,4 +149,4 @@ function verifySignature(raw, sig) {
   return sig === expected;
 }
 
-module.exports = { configured, cashin, cashout, find, verifySignature };
+module.exports = { configured, cashin, cashout, find, transactions, verifySignature };

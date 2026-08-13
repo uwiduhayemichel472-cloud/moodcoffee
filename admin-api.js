@@ -75,7 +75,7 @@ r.get('/me', H.requireAdmin, (req, res) => res.json({ admin: req.admin }));
 // ---------- Protected routes below ----------
 r.use(H.requireAdmin);
 
-const ALL_PERMS = ['overview', 'products', 'categories', 'orders', 'customers', 'promos', 'settings', 'notifications', 'announcements', 'reports', 'reviews', 'reservations', 'giftcards', 'payouts'];
+const ALL_PERMS = ['overview', 'products', 'categories', 'orders', 'customers', 'promos', 'settings', 'notifications', 'announcements', 'reports', 'reviews', 'reservations', 'giftcards', 'payouts', 'paypack'];
 function perm(...keys) {
   return (req, res, next) => {
     if (req.admin.isSuper) return next();
@@ -630,6 +630,20 @@ r.get('/export/:type', perm('reports'), async (req, res) => {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=' + t + '.csv');
     res.send(csv);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ---------- Paypack payments (live transactions, mirrors the Paypack dashboard) ----------
+r.get('/paypack', perm('paypack'), async (req, res) => {
+  try {
+    if (!paypack.configured())
+      return res.status(400).json({ error: 'Paypack is not configured. Add PAYPACK_CLIENT_ID and PAYPACK_CLIENT_SECRET.' });
+    const limit = Math.min(200, Number(req.query.limit) || 100);
+    const kind = String(req.query.kind || '');
+    const list = await paypack.transactions({ limit, kind });
+    const received = list.filter(t => t.kind === 'CASHIN' && t.status === 'successful').reduce((s, t) => s + t.amount, 0);
+    const sent = list.filter(t => t.kind === 'CASHOUT' && t.status === 'successful').reduce((s, t) => s + t.amount, 0);
+    res.json({ list, received, sent });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
