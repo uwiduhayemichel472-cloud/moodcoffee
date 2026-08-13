@@ -91,9 +91,21 @@ async function cashout({ amount, phone, idempotencyKey }) {
   return j;
 }
 
-/** Look up a transaction by its Paypack ref. status: pending/successful/failed. */
+/**
+ * Look up a transaction by its Paypack ref. Paypack's find endpoint returns
+ * the transaction WITHOUT a status field, so we also query the events endpoint
+ * (which reports current status) and attach it. status: pending/successful/failed.
+ */
 async function find(ref) {
-  return pk('transactions/find/' + encodeURIComponent(String(ref)), 'GET');
+  const t = await pk('transactions/find/' + encodeURIComponent(String(ref)), 'GET');
+  try {
+    const ev = await pk('events/transactions?ref=' + encodeURIComponent(String(ref)), 'GET');
+    const list = (ev && Array.isArray(ev.transactions)) ? ev.transactions : [];
+    const latest = list[0] && list[0].data;
+    const status = (ev && ev.status) || (latest && latest.status);
+    if (status) t.status = status;
+  } catch (e) { /* find response is still usable without a status */ }
+  return t;
 }
 
 /** Verify the x-paypack-signature header (base64 HMAC-SHA256 of the raw body). */
