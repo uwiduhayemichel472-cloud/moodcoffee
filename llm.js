@@ -59,27 +59,43 @@ function status() {
 }
 
 // Ask the configured LLM to answer `user` given a `system` prompt.
-// Throws on transport/provider errors so the caller can fall back gracefully.
-async function ask({ system, user, maxTokens = 500 }) {
+// Retries transient failures (rate limits / server hiccups) with backoff,
+// then throws so the caller can fall back gracefully.
+async function ask({ system, user, maxTokens = 500, attempts = 3 }) {
   const p = provider();
   if (!p) throw new Error('No LLM API key configured.');
   const pr = PROVIDERS[p];
   const key = pr.key();
   const model = process.env.LLM_MODEL || pr.model;
   const url = typeof pr.url === 'function' ? pr.url(key) : pr.url;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: pr.headers(key),
-    body: JSON.stringify(pr.build(model, String(system || ''), String(user || ''), maxTokens))
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error('LLM (' + p + ') HTTP ' + res.status + ': ' + body.slice(0, 200));
+  const body = JSON.stringify(pr.build(model, String(system || ''), String(user || ''), maxTokens));
+
+  let lastErr = null;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url, { method: 'POST', headers: pr.headers(key), body });
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        lastErr = new Error('LLM (' + p + ') HTTP ' + res.status + ': ' + body.slice(0, 200));
+        // Retry only transient problems: 429 (rate limit) and 5xx (server hiccup).
+        if (res.status !== 429 && res.status < 500) throw lastErr;
+      } else {
+        const j = await res.json();
+        const text = pr.parse(j);
+        if (!text) throw new Error('LLM (' + p + ') returned an empty reply.');
+        return String(text).trim();
+      }
+    } catch (e) {
+      // Network / DNS / socket errors are transient too -> retry them.
+      if (e !== lastErr && !(e instanceof Error && !String(e.message).match(/^LLM \(/))) {
+        lastErr = e;
+      } else if (e !== lastErr) {
+        throw e;
+      }
+    }
+    if (i < attempts - 1) await new Promise(r => setTimeout(r, 600 * (i + 1)));
   }
-  const j = await res.json();
-  const text = pr.parse(j);
-  if (!text) throw new Error('LLM (' + p + ') returned an empty reply.');
-  return String(text).trim();
+  throw lastErr || new Error('LLM (' + p + ') failed after ' + attempts + ' attempts.');
 }
 
 module.exports = { configured, status, ask };
