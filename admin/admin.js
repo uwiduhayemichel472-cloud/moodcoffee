@@ -1010,35 +1010,50 @@ const AI_SUGGEST = ['Who is the latest customer?', 'How much did we earn today?'
 async function loadAi() {
   if (!aiMsgs.length) aiMsgs = [{ from: 'ai', text: '👋 Hi ' + (admin ? admin.name : '') + '! Ask me anything about your shop — the latest customer, today\'s earnings, new orders, best sellers, insights and more.' }];
   return `
-  <div class="toolbar"><span style="font-size:.82rem;color:#7a5c44">Your data, plain language. I answer from the live database — nothing is sent outside your server.</span></div>
-  <div class="ai-chat">
-    <div class="ai-msgs" id="aiMsgs">${aiMsgs.map(m => aiBubble(m)).join('')}</div>
-    <div class="ai-suggest">${AI_SUGGEST.map(s => `<button class="chip" onclick="aiSend('${s.replace(/'/g, "\\'")}',true)">${esc(s)}</button>`).join('')}</div>
+  <div class="ai">
+    <div class="ai-hd">
+      <div class="ai-brand">
+        <div class="ai-ava"><span>☕</span></div>
+        <div><b>MOOD Assistant</b><span class="ai-on">● Online · answers from your live data</span></div>
+      </div>
+      <button class="a-btn" onclick="aiReset()">+ New chat</button>
+    </div>
+    <div class="ai-msgs" id="aiMsgs">${aiMsgs.map(aiBubble).join('')}</div>
+    <div class="ai-sugs" id="aiSugs">${AI_SUGGEST.map(s => `<button class="chip" onclick="aiSend('${s.replace(/'/g, "\\'")}',true)">${esc(s)}</button>`).join('')}</div>
     <div class="ai-in">
       <input id="aiIn" placeholder="Ask about orders, customers, money…" onkeydown="if(event.key==='Enter')aiSend()">
-      <button class="gold" onclick="aiSend()">Send</button>
+      <button class="ai-send" onclick="aiSend()" aria-label="Send">➤</button>
     </div>
   </div>`;
 }
 function aiBubble(m) {
-  return `<div class="ai-msg ${m.from === 'me' ? 'me' : ''}"><div class="ai-txt">${esc(m.text).replace(/\n/g, '<br>')}</div></div>`;
+  if (m.typing) return `<div class="ai-msg ai-bot"><div class="ai-ava"><span>☕</span></div><div class="ai-txt typing"><i></i><i></i><i></i></div></div>`;
+  if (m.from === 'me') return `<div class="ai-msg ai-me"><div class="ai-txt">${esc(m.text).replace(/\n/g, '<br>')}</div></div>`;
+  return `<div class="ai-msg ai-bot"><div class="ai-ava"><span>☕</span></div><div class="ai-txt">${esc(m.text).replace(/\n/g, '<br>')}</div></div>`;
+}
+function aiReset() {
+  aiMsgs = [];
+  switchPanel('ai');
 }
 async function aiSend(suggested, isSug) {
   const inp = $('aiIn');
   const txt = isSug ? suggested : (inp ? inp.value.trim() : '');
   if (!txt) return;
   aiMsgs.push({ from: 'me', text: txt });
-  const box = $('aiMsgs');
-  if (box) box.innerHTML = aiMsgs.map(aiBubble).join('');
+  aiMsgs.push({ from: 'ai', typing: true });
   if (inp) inp.value = '';
+  renderAi();
   try {
     const r = await api('/api/admin/ai/chat', { method: 'POST', body: JSON.stringify({ message: txt }) });
-    aiMsgs.push({ from: 'ai', text: r.answer });
+    aiMsgs[aiMsgs.length - 1] = { from: 'ai', text: r.answer };
   } catch (e) {
-    aiMsgs.push({ from: 'ai', text: '⚠️ ' + e.message });
+    aiMsgs[aiMsgs.length - 1] = { from: 'ai', text: '⚠️ ' + e.message };
   }
-  const b2 = $('aiMsgs');
-  if (b2) { b2.innerHTML = aiMsgs.map(aiBubble).join(''); b2.scrollTop = b2.scrollHeight; }
+  renderAi();
+}
+function renderAi() {
+  const b = $('aiMsgs');
+  if (b) { b.innerHTML = aiMsgs.map(aiBubble).join(''); b.scrollTop = b.scrollHeight; }
 }
 
 /* ---------------- Team & Admins (super admin only) ---------------- */
