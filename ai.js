@@ -11,6 +11,8 @@
 // improve over time. Insights are computed live from past orders, so the
 // assistant "learns" from the shop's real history.
 const { q } = require('./db.js');
+const llm = require('./llm.js');
+const llmConfigured = llm.configured();
 
 // ── small helpers ──────────────────────────────────
 const n = v => Number(v || 0);
@@ -489,7 +491,7 @@ async function chat({ role, input, user }) {
     if (best) {
       answer = await best.answer(text, user);
     } else {
-      answer = role === 'admin' ? adminHelp() : customerHelp();
+      answer = await llmAnswer(role, text);
     }
   } catch (e) {
     answer = 'Sorry — I ran into a problem answering that. Please try again in a moment.';
@@ -501,7 +503,21 @@ async function chat({ role, input, user }) {
       [role, user && user.id ? user.id : null, text.slice(0, 300), intent, answer.slice(0, 1500)]);
   } catch (e) { /* logging is optional */ }
 
-  return { answer, intent };
+  return { answer, intent, llm: !!llmConfigured };
+}
+
+// Free-form fallback: built-in help when no LLM key is set, otherwise ask the
+// connected real LLM (OpenAI / Anthropic / Gemini) and fall back to help on error.
+async function llmAnswer(role, text) {
+  if (!llmConfigured) return role === 'admin' ? adminHelp() : customerHelp();
+  const sys = role === 'admin'
+    ? 'You are the AI assistant for MOOD Coffee Shop & Bakery (Kigali, Rwanda). Staff ask about customers, orders, earnings, products, money and operations. Answer briefly and clearly, in the same language as the question. Prices are in Rwandan Francs (RWF). If you do not know something, say so honestly.'
+    : 'You are the friendly AI assistant for MOOD Coffee Shop & Bakery (Kigali, Rwanda). Customers ask about the menu, prices, delivery, loyalty points, gift cards, reservations, opening hours and their orders. Answer briefly and warmly, in the same language as the question. Prices are in Rwandan Francs (RWF). If unsure about something, tell them to ask the staff.';
+  try {
+    return await llm.ask({ system: sys, user: text });
+  } catch (e) {
+    return role === 'admin' ? adminHelp() : customerHelp();
+  }
 }
 
 module.exports = { chat };

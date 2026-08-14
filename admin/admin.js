@@ -1009,12 +1009,14 @@ const AI_SUGGEST = ['Who is the latest customer?', 'How much did we earn today?'
 
 async function loadAi() {
   if (!aiMsgs.length) aiMsgs = [{ from: 'ai', text: '👋 Hi ' + (admin ? admin.name : '') + '! Ask me anything about your shop — the latest customer, today\'s earnings, new orders, best sellers, insights and more.' }];
+  let llmBadge = 'built-in intents';
+  try { const s = await api('/api/admin/llm'); if (s.configured) llmBadge = s.provider + ' · ' + s.model; } catch (e) {}
   return `
   <div class="ai">
     <div class="ai-hd">
       <div class="ai-brand">
         <div class="ai-ava"><span>☕</span></div>
-        <div><b>MOOD Assistant</b><span class="ai-on">● Online · answers from your live data</span></div>
+        <div><b>MOOD Assistant</b><span class="ai-on">● Online · answers from your live data · <em style="font-style:normal;color:#8a6a4e">${esc(llmBadge)}</em></span></div>
       </div>
       <button class="a-btn" onclick="aiReset()">+ New chat</button>
     </div>

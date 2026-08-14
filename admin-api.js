@@ -5,6 +5,7 @@ const H = require('./helpers.js');
 const paypack = require('./paypack.js');
 const wallet = require('./wallet.js');
 const ai = require('./ai.js');
+const llm = require('./llm.js');
 
 const r = express.Router();
 const money = v => Number(v || 0).toFixed(2);
@@ -86,6 +87,11 @@ r.post('/ai/chat', H.requireAdmin, perm('overview'), async (req, res) => {
 
 // ---------- Protected routes below ----------
 r.use(H.requireAdmin);
+
+// Which real-LLM provider (if any) is connected for free-form AI questions.
+r.get('/llm', perm('overview'), async (req, res) => {
+  try { res.json(llm.status()); } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 const ALL_PERMS = ['overview', 'products', 'categories', 'orders', 'customers', 'promos', 'settings', 'notifications', 'announcements', 'reports', 'reviews', 'reservations', 'giftcards', 'payouts', 'paypack'];
 function perm(...keys) {
