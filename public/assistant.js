@@ -21,14 +21,14 @@
   btn.className = 'mood-ai-btn';
   btn.type = 'button';
   btn.setAttribute('aria-label', 'Ask MOOD assistant');
-  btn.innerHTML = '💬<span class="pulse"></span>';
+  btn.innerHTML = '<span class="ai-lb">AI</span><span class="pulse"></span>';
 
   var panel = document.createElement('div');
   panel.className = 'mood-ai';
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-label', 'MOOD assistant');
   panel.innerHTML =
-    '<div class="mood-ai-hd"><span class="ico">☕</span><div><b>' + t('ai_title', 'MOOD Assistant') + '</b><span class="st"><i></i>' + t('ai_sub', 'Ask me anything about MOOD') + '</span></div>' +
+    '<div class="mood-ai-hd"><div><b>' + t('ai_title', 'MOOD Assistant') + '</b><span class="st"><i></i>' + t('ai_sub', 'Ask me anything about MOOD') + '</span></div>' +
     '<button class="mood-ai-x" type="button" aria-label="Close">×</button></div>' +
     '<div class="mood-ai-msgs"></div>' +
     '<div class="mood-ai-sug"></div>' +
@@ -45,12 +45,6 @@
   function bubble(from, text, typing) {
     var d = document.createElement('div');
     d.className = 'mood-ai-m' + (from === 'me' ? ' me' : '');
-    if (from !== 'me') {
-      var a = document.createElement('div');
-      a.className = 'mav';
-      a.textContent = '☕';
-      d.appendChild(a);
-    }
     var b = document.createElement('div');
     b.className = 'mood-ai-t' + (typing ? ' typing' : '');
     if (typing) { b.innerHTML = '<i></i><i></i><i></i>'; } else { b.textContent = text; }
@@ -76,7 +70,7 @@
     });
   }
   function open() {
-    if (!msgs.length) addMsg('ai', t('ai_welcome', 'Hi! I can help you with the menu, prices, delivery, loyalty, gift cards and more. What would you like to know? ☕'));
+    if (!msgs.length) addMsg('ai', t('ai_welcome', 'Hi! I can help you with the menu, prices, delivery, loyalty, gift cards and more. What would you like to know?'));
     panel.classList.add('open');
     btn.style.display = 'none';
     renderSugs();

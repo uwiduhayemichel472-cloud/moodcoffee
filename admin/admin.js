@@ -1015,7 +1015,6 @@ async function loadAi() {
   <div class="ai">
     <div class="ai-hd">
       <div class="ai-brand">
-        <div class="ai-ava"><span>☕</span></div>
         <div><b>MOOD Assistant</b><span class="ai-on">● Online · answers from your live data · <em style="font-style:normal;color:#8a6a4e">${esc(llmBadge)}</em></span></div>
       </div>
       <button class="a-btn" onclick="aiReset()">+ New chat</button>
@@ -1029,9 +1028,9 @@ async function loadAi() {
   </div>`;
 }
 function aiBubble(m) {
-  if (m.typing) return `<div class="ai-msg ai-bot"><div class="ai-ava"><span>☕</span></div><div class="ai-txt typing"><i></i><i></i><i></i></div></div>`;
+  if (m.typing) return `<div class="ai-msg ai-bot"><div class="ai-txt typing"><i></i><i></i><i></i></div></div>`;
   if (m.from === 'me') return `<div class="ai-msg ai-me"><div class="ai-txt">${esc(m.text).replace(/\n/g, '<br>')}</div></div>`;
-  return `<div class="ai-msg ai-bot"><div class="ai-ava"><span>☕</span></div><div class="ai-txt">${esc(m.text).replace(/\n/g, '<br>')}</div></div>`;
+  return `<div class="ai-msg ai-bot"><div class="ai-txt">${esc(m.text).replace(/\n/g, '<br>')}</div></div>`;
 }
 function aiReset() {
   aiMsgs = [];
