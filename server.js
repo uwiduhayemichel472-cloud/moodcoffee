@@ -15,6 +15,10 @@ const app = express();
 // Keep the raw body so the Flutterwave webhook signature (HMAC over the raw
 // payload) can be verified.
 app.use(express.json({ limit: '4mb', verify: (req, res, buf) => { req.rawBody = buf; } }));
+// Raw uploads: admins upload the Login/Sign-up promotional video straight to
+// disk. express.json above skips non-JSON bodies, so this runs first for that
+// one path and leaves req.body as a Buffer.
+app.use('/api/admin/auth-videos/upload', express.raw({ type: () => true, limit: '62mb' }));
 app.use((req, res, next) => {
   if (req.path === '/api/pay/webhook') return next(); // Flutterwave servers have no Origin
   return H.csrf(req, res, next); // block cross-origin writes
@@ -55,7 +59,7 @@ async function loadSettings() {
   const s = rows[0] || {};
   let toggles = {};
   try { toggles = JSON.parse(s.toggles || '{}'); } catch (e) { toggles = {}; }
-  for (const k in { loyalty: true }) if (toggles[k] === undefined) toggles[k] = true;
+  for (const k in { loyalty: true, opay: true }) if (toggles[k] === undefined) toggles[k] = true;
   let smtp = {};
   try { smtp = JSON.parse(s.smtp_json || '{}') || {}; } catch (e) { smtp = {}; }
   return {
@@ -65,6 +69,9 @@ async function loadSettings() {
     deliveryZones: s.delivery_zones, toggles, pointsValue: Number(s.points_value) || 0,
     loyaltyThreshold: Math.max(1, Number(s.loyalty_threshold) || 100),
     maxReviewLen: Math.max(20, Math.min(2000, Number(s.max_review_len) || 300)),
+    // "Two-in-one" switch: online payment only shows when the admin has turned
+    // it on (opay toggle) AND a payment gateway is actually wired up.
+    onlinePay: toggles.opay !== false && (pay.configured() || paypack.configured()),
     smtp,
     googleAuth: !!(cfg.google && cfg.google.clientId && cfg.google.clientSecret && cfg.google.redirectUri)
   };
@@ -101,10 +108,9 @@ app.get('/api/init', async (req, res) => {
     let me = null;
     const s = await H.getSession(req, 'customer');
     if (s) { const u = await q('SELECT id,name,email,phone,points,created_at FROM customers WHERE id=?', [s.id]); if (u.length) me = u[0]; }
-    // Tell the storefront whether online payments are wired up and give it the
-    // key it needs to encrypt card details before they leave the browser.
-    settings.onlinePay = pay.configured() || paypack.configured();
-    settings.flwEncKey = pay.configured() ? cfg.gateway.flutterwave.encryptionKey : '';
+    // Give the storefront the key it needs to encrypt card details before they
+    // leave the browser (only when online payment is live).
+    settings.flwEncKey = settings.onlinePay && pay.configured() ? cfg.gateway.flutterwave.encryptionKey : '';
     res.json({
       settings,
       categories: cats.map(c => ({ id: c.id, name: c.name, img: c.image, service: c.service || 'coffee' })),
@@ -117,6 +123,14 @@ app.get('/api/init', async (req, res) => {
 
 app.get('/api/settings', async (req, res) => {
   try { res.json(await loadSettings()); } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// The active promotional video for the Login / Sign-up screen (managed in Admin).
+app.get('/api/auth-video', async (req, res) => {
+  try {
+    const rows = await q('SELECT filename,url FROM auth_videos WHERE active=1 ORDER BY id DESC LIMIT 1');
+    res.json({ video: rows.length ? { filename: rows[0].filename, url: rows[0].url } : null });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/register', async (req, res) => {
@@ -369,7 +383,7 @@ app.post('/api/orders', H.requireCustomer, async (req, res) => {
     total = Math.round((total + delFee) * 100) / 100;
 
     const ref = 'MD-' + Date.now().toString().slice(-6) + '-' + Math.floor(100 + Math.random() * 900);
-    const useGateway = pay.configured() || paypack.configured();
+    const useGateway = !!st.onlinePay;
     const currency = st.currency || 'USD';
     const isRWF = currency === 'RWF';
     const payAmount = isRWF ? Math.max(100, Math.round(total)) : Math.round(total * 100) / 100;

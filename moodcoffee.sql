@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS rewards;
 DROP TABLE IF EXISTS announcements;
 DROP TABLE IF EXISTS giftcards;
 DROP TABLE IF EXISTS reservations;
+DROP TABLE IF EXISTS auth_videos;
 DROP TABLE IF EXISTS sessions;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
@@ -183,6 +184,15 @@ CREATE TABLE announcements (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+CREATE TABLE auth_videos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  filename VARCHAR(200) NOT NULL DEFAULT 'Video',
+  url TEXT NOT NULL,
+  active TINYINT(1) NOT NULL DEFAULT 0,
+  uploaded_by INT DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
 CREATE TABLE sessions (
   token CHAR(64) PRIMARY KEY,
   user_type VARCHAR(10) NOT NULL,
@@ -260,7 +270,7 @@ INSERT INTO products (cat_id, name, description, price, emoji, image, available,
 (5, 'Salted Caramel Cake', 'Layers of caramel sponge with a sea-salt finish.', 4.20, '🍰', 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500&q=80&auto=format&fit=crop', 1, 0);
 
 -- ---------- Seed: settings ----------
-INSERT INTO settings (id, toggles, points_value) VALUES (1, '{"ord":true,"reg":true,"pp":true,"mtn":true,"airtel":true,"card":true,"maint":false,"loyalty":true,"lang_en":true,"lang_fr":true,"lang_rw":true}', 0.0100);
+INSERT INTO settings (id, toggles, points_value) VALUES (1, '{"ord":true,"reg":true,"opay":true,"pp":true,"mtn":true,"airtel":true,"card":true,"maint":false,"loyalty":true,"lang_en":true,"lang_fr":true,"lang_rw":true}', 0.0100);
 
 -- ---------- Seed: promo (optional) ----------
 INSERT INTO promos (code, discount) VALUES ('MOOD10', 10);

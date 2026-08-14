@@ -8,6 +8,9 @@ node_modules/
 *.log
 npm-debug.log*
 
+# Admin-uploaded files (Login/Sign-up promo videos)
+public/auth-videos/
+
 # OS junk
 .DS_Store
 Thumbs.db

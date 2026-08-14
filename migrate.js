@@ -116,6 +116,14 @@ async function main() {
     INDEX idx_role (role),
     INDEX idx_created (created_at)
   ) ENGINE=InnoDB`);
+  await conn.query(`CREATE TABLE IF NOT EXISTS auth_videos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    filename VARCHAR(200) NOT NULL DEFAULT 'Video',
+    url TEXT NOT NULL,
+    active TINYINT(1) NOT NULL DEFAULT 0,
+    uploaded_by INT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB`);
 
   console.log('Adding new columns (if missing)…');
   await addCol(conn, 'customers', 'points INT NOT NULL DEFAULT 0');
@@ -142,6 +150,13 @@ async function main() {
       t.loyalty = true;
       await conn.query('UPDATE settings SET toggles=? WHERE id=1', [JSON.stringify(t)]);
       console.log('  + settings.toggles.loyalty (default ON)');
+    }
+    // Online-payment master switch (default ON — admin can turn it off to run
+    // the shop in "pay at the shop" mode).
+    if (t.opay === undefined) {
+      t.opay = true;
+      await conn.query('UPDATE settings SET toggles=? WHERE id=1', [JSON.stringify(t)]);
+      console.log('  + settings.toggles.opay (default ON)');
     }
   }
 

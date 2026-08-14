@@ -49,7 +49,9 @@ function fp(ip, ua) { return crypto.createHash('sha256').update(ip + '|' + ua).d
 async function issueSession(res, type, userId, req) {
   const token = crypto.randomBytes(32).toString('hex');
   const expires = new Date(Date.now() + cfg.sessTTL);
-  const exp = expires.toISOString().slice(0, 19).replace('T', ' ');
+  const p2 = n => String(n).padStart(2, '0');
+  const exp = expires.getFullYear() + '-' + p2(expires.getMonth() + 1) + '-' + p2(expires.getDate()) +
+    ' ' + p2(expires.getHours()) + ':' + p2(expires.getMinutes()) + ':' + p2(expires.getSeconds());
   const ip = clientIP(req || {}), ua = clientUA(req || {});
   await q('INSERT INTO sessions (token,user_type,user_id,expires_at,ip,ua) VALUES (?,?,?,?,?,?)',
     [token, type, userId, exp, ip, ua]);

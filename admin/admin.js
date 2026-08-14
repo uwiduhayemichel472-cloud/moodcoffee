@@ -144,8 +144,8 @@ function switchPanel(p) {
   else if (!can(p)) p = 'overview';
   panel = p;
   document.querySelectorAll('.nl').forEach(b => b.classList.toggle('active', b.dataset.p === p));
-  $('title').textContent = { overview: 'Dashboard', products: 'Products', categories: 'Categories', orders: 'Orders', customers: 'Customers', promos: 'Promo Codes', settings: 'Settings', images: 'Site Images', notifications: 'Notifications', announcements: 'Announcements', reports: 'Reports', reviews: 'Reviews', reservations: 'Reservations', giftcards: 'Gift Cards', payouts: 'Withdrawals', paypack: 'Money', ai: 'AI Assistant', admins: 'Team & Admins' }[p] || 'Dashboard';
-  const L = { overview: loadOverview, products: loadProducts, categories: loadCategories, orders: loadOrders, customers: loadCustomers, promos: loadPromos, settings: loadSettings, images: loadImages, notifications: loadNotifs, announcements: loadAnnouncements, reports: loadReports, reviews: loadReviews, reservations: loadReservations, giftcards: loadGiftcards, payouts: loadPayouts, paypack: loadMoney, ai: loadAi, admins: loadAdmins };
+  $('title').textContent = { overview: 'Dashboard', products: 'Products', categories: 'Categories', orders: 'Orders', customers: 'Customers', promos: 'Promo Codes', settings: 'Settings', images: 'Site Images', authvideo: 'Auth Video', notifications: 'Notifications', announcements: 'Announcements', reports: 'Reports', reviews: 'Reviews', reservations: 'Reservations', giftcards: 'Gift Cards', payouts: 'Withdrawals', paypack: 'Money', ai: 'AI Assistant', admins: 'Team & Admins' }[p] || 'Dashboard';
+  const L = { overview: loadOverview, products: loadProducts, categories: loadCategories, orders: loadOrders, customers: loadCustomers, promos: loadPromos, settings: loadSettings, images: loadImages, authvideo: loadAuthVideos, notifications: loadNotifs, announcements: loadAnnouncements, reports: loadReports, reviews: loadReviews, reservations: loadReservations, giftcards: loadGiftcards, payouts: loadPayouts, paypack: loadMoney, ai: loadAi, admins: loadAdmins };
   $('pan').innerHTML = '<div class="card2"><div class="bd" style="color:#999">Loading…</div></div>';
   L[p]().then(h => $('pan').innerHTML = h).catch(e => $('pan').innerHTML = `<div class="card2"><div class="bd" style="color:#c0392b">${esc(e.message)}</div></div>`);
 }
@@ -441,8 +441,8 @@ async function loadSettings() {
     </div></div>
     <div class="card2"><div class="hd"><b>Storefront toggles</b></div><div class="bd">
       ${tgl('ord', 'Accept orders')}${tgl('reg', 'Allow registration')}
-      ${tgl('pp', 'PayPal / card')}${tgl('mtn', 'MTN MoMo')}${tgl('airtel', 'Airtel Money')}
-      ${tgl('card', 'Show prices')}${tgl('maint', 'Maintenance mode')}
+      ${tgl('opay', 'Online payment (on = pay online, off = pay at the shop)')}${tgl('maint', 'Maintenance mode')}
+      ${tgl('mtn', 'MTN MoMo')}${tgl('airtel', 'Airtel Money')}${tgl('card', 'Bank Card (Visa / Mastercard)')}
     </div></div>
     <div class="card2"><div class="hd"><b>Loyalty points</b></div><div class="bd">
       ${tgl('loyalty', 'Enable loyalty points')}
@@ -625,6 +625,86 @@ async function resetImg(k) {
     $('imgprev_' + k).style.backgroundImage = url ? "url('" + url + "')" : 'none';
     toast('Reset to default');
   } catch (e) { toast(e.message); }
+}
+
+/* ---------------- Auth Video (Login / Sign-up screen) ---------------- */
+async function loadAuthVideos() {
+  const v = await api('/api/admin/auth-videos');
+  return `
+  <div class="toolbar"><span style="font-size:.82rem;color:#7a5c44">This video plays behind the Login / Sign-up screen on the website. Upload a promo video or paste a URL, then press <b>Activate</b> to make it live. Only one video can be active at a time.</span></div>
+  <div class="grid2">
+    <div class="card2"><div class="hd"><b>Add a promotional video</b></div><div class="bd">
+      <label class="upl av-up"><input type="file" accept="video/mp4,video/webm" onchange="upAuthVideo(this)">📁 Upload video from computer</label>
+      <p style="font-size:.74rem;color:#7a5c44;margin:-6px 0 14px">MP4 or WebM, up to 60 MB.</p>
+      <div class="fg"><label>…or paste a video URL<input id="avUrl" placeholder="https://cdn.example.com/promo.mp4"></label></div>
+      <button class="gold" style="max-width:200px" onclick="addAuthVideoUrl()">Add video from URL</button>
+    </div></div>
+    <div class="card2"><div class="hd"><b>Videos</b></div><div class="bd">
+      <div class="av-grid">${v.map(authVideoCard).join('') || '<p style="color:#888">No videos yet — add your first promotional video on the left.</p>'}</div>
+    </div></div>
+  </div>`;
+}
+function authVideoCard(x) {
+  return `
+  <div class="av-card">
+    <video class="av-prev" src="${esc(x.url)}" muted loop playsinline preload="metadata" ${x.active ? 'autoplay' : ''}></video>
+    <div class="av-meta">
+      <b>${esc(x.filename || 'Video')}</b>
+      <span class="av-state ${x.active ? 'live' : ''}">${x.active ? '● LIVE on login/signup' : 'Inactive'}</span>
+      <small>${dt(x.created_at)}${x.uploader ? ' · by ' + esc(x.uploader) : ''}</small>
+    </div>
+    <div class="av-acts">
+      <button class="a-btn" onclick="previewAuthVideo(this)">Preview</button>
+      ${x.active ? '' : '<button class="a-btn gold" onclick="activateAuthVideo(' + x.id + ')">Activate</button>'}
+      <button class="a-btn red" onclick="delAuthVideo(' + x.id + ')">Delete</button>
+    </div>
+  </div>`;
+}
+function previewAuthVideo(btn) {
+  const card = btn.closest('.av-card'), v = card.querySelector('video');
+  if (!v) return;
+  if (v.paused) { v.play(); btn.textContent = 'Pause'; }
+  else { v.pause(); btn.textContent = 'Preview'; }
+}
+async function upAuthVideo(input) {
+  const f = input.files[0]; if (!f) return;
+  const ext = (f.name.split('.').pop() || '').toLowerCase();
+  if (!['mp4', 'webm'].includes(ext)) { toast('Only MP4 or WebM videos are allowed.'); input.value = ''; return; }
+  if (f.size > 60 * 1024 * 1024) { toast('Video too large — max 60 MB.'); input.value = ''; return; }
+  toast('Uploading…');
+  try {
+    const r = await fetch('/api/admin/auth-videos/upload?name=' + encodeURIComponent(f.name), { method: 'POST', body: f });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'Upload failed.');
+    toast('Video uploaded — press Activate to make it live.');
+    loadAuthVideos().then(h => { if (panel === 'authvideo') $('pan').innerHTML = h; });
+  } catch (e) { toast(e.message); }
+  input.value = '';
+}
+async function addAuthVideoUrl() {
+  const url = $('avUrl').value.trim();
+  if (!url) { toast('Paste a video URL first.'); return; }
+  try {
+    await api('/api/admin/auth-videos', { method: 'POST', body: JSON.stringify({ url, filename: url.split('/').pop().split('?')[0] || 'Promotional video' }) });
+    toast('Video added — press Activate to make it live.');
+    loadAuthVideos().then(h => { if (panel === 'authvideo') $('pan').innerHTML = h; });
+  } catch (e) { toast(e.message); }
+}
+async function activateAuthVideo(id) {
+  try {
+    await api('/api/admin/auth-videos/' + id + '/activate', { method: 'POST', body: '{}' });
+    toast('Video activated — it is now live on the Login / Sign-up screen.');
+    loadAuthVideos().then(h => { if (panel === 'authvideo') $('pan').innerHTML = h; });
+  } catch (e) { toast(e.message); }
+}
+async function delAuthVideo(id) {
+  confirm('Delete this video?', async () => {
+    try {
+      await api('/api/admin/auth-videos/' + id, { method: 'DELETE' });
+      toast('Deleted.');
+      loadAuthVideos().then(h => { if (panel === 'authvideo') $('pan').innerHTML = h; });
+    } catch (e) { toast(e.message); }
+  });
 }
 
 /* ---------------- Notifications ---------------- */

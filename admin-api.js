@@ -1,4 +1,7 @@
 // ─── Admin API — mounted at /api/admin, requires admin session ───
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
 const express = require('express');
 const { q } = require('./db.js');
 const H = require('./helpers.js');
@@ -8,6 +11,7 @@ const ai = require('./ai.js');
 const llm = require('./llm.js');
 
 const r = express.Router();
+const VIDEOS_DIR = path.join(__dirname, 'public', 'auth-videos');
 const money = v => Number(v || 0).toFixed(2);
 const VALID_STATUS = ['Preparing', 'Delivered', 'Pending', 'Cancelled'];
 const VALID_PAY = ['paypal', 'mtn', 'airtel', 'card'];
@@ -806,6 +810,75 @@ r.get('/payouts/:ref', perm('payouts'), async (req, res) => {
       [st, ev, req.params.ref]);
     await q('UPDATE wallet_tx SET status=? WHERE ref=? AND method=?', [st, String(req.params.ref).slice(0, 40), 'paypack']);
     res.json({ ref: req.params.ref, status: st });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ---------- Login / Sign-up screen promotional video ----------
+// Only one video is active at a time (activate switches it). Uploads are saved
+// to public/auth-videos/ and served statically; URL entries are kept as-is.
+r.get('/auth-videos', perm('settings'), async (req, res) => {
+  try {
+    const rows = await q(`SELECT v.*, a.name uploader FROM auth_videos v
+      LEFT JOIN admins a ON a.id=v.uploaded_by
+      ORDER BY v.created_at DESC, v.id DESC`);
+    res.json(rows.map(v => ({
+      id: v.id, filename: v.filename, url: v.url, active: !!v.active,
+      uploader: v.uploader || '', created_at: v.created_at
+    })));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+r.post('/auth-videos/upload', perm('settings'), async (req, res) => {
+  try {
+    const buf = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+    if (!buf.length) return res.status(400).json({ error: 'No file received.' });
+    if (buf.length > 60 * 1024 * 1024) return res.status(400).json({ error: 'Video too large — max 60 MB.' });
+    const name = String(req.query.name || 'Video').replace(/[\\/:*?"<>|]/g, '').trim().slice(0, 120) || 'Video';
+    const ext = (name.split('.').pop() || '').toLowerCase();
+    if (!['mp4', 'webm'].includes(ext)) return res.status(400).json({ error: 'Only MP4 or WebM videos are allowed.' });
+    fs.mkdirSync(VIDEOS_DIR, { recursive: true });
+    const fname = Date.now() + '-' + crypto.randomBytes(4).toString('hex') + '.' + ext;
+    fs.writeFileSync(path.join(VIDEOS_DIR, fname), buf);
+    const url = '/auth-videos/' + fname;
+    const rr = await q('INSERT INTO auth_videos (filename,url,active,uploaded_by) VALUES (?,?,0,?)', [name, url, req.admin.id]);
+    res.json({ ok: true, id: rr.insertId, url });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+r.post('/auth-videos', perm('settings'), async (req, res) => {
+  try {
+    const url = String(req.body.url || '').trim().slice(0, 1000);
+    if (!/^https?:\/\//i.test(url)) return res.status(400).json({ error: 'Enter a valid video URL (https://…).' });
+    const filename = String(req.body.filename || '').trim().slice(0, 200) || 'Promotional video';
+    const rr = await q('INSERT INTO auth_videos (filename,url,active,uploaded_by) VALUES (?,?,0,?)', [filename, url, req.admin.id]);
+    res.json({ ok: true, id: rr.insertId });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+r.post('/auth-videos/:id/activate', perm('settings'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const rows = await q('SELECT id FROM auth_videos WHERE id=?', [id]);
+    if (!rows.length) return res.status(404).json({ error: 'Video not found.' });
+    await q('UPDATE auth_videos SET active=0 WHERE active=1');
+    await q('UPDATE auth_videos SET active=1 WHERE id=?', [id]);
+    H.notify('Login / Sign-up screen video changed');
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+r.delete('/auth-videos/:id', perm('settings'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const rows = await q('SELECT url FROM auth_videos WHERE id=?', [id]);
+    if (!rows.length) return res.status(404).json({ error: 'Video not found.' });
+    await q('DELETE FROM auth_videos WHERE id=?', [id]);
+    const url = rows[0].url || '';
+    if (url.startsWith('/auth-videos/')) {
+      const f = path.join(VIDEOS_DIR, path.basename(url));
+      try { fs.unlinkSync(f); } catch (e) { /* file already gone */ }
+    }
+    res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

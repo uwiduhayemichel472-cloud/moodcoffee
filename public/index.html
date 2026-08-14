@@ -483,6 +483,7 @@ footer li a:hover{color:var(--gl)}
 </a>
 
 <script src="i18n.js"></script>
+<script src="auth-ui.js"></script>
 <script src="announce.js"></script>
 <script src="assistant.js"></script>
 <script>
@@ -543,6 +544,9 @@ window.addEventListener('message',function(e){
 function openAuth(mode){
   var isLogin=mode==='login';
   document.getElementById('authContent').innerHTML =
+    '<div class="mood-auth-split">'+
+    moodAuthMediaHtml()+
+    '<div class="mood-auth-form"><div class="mood-auth-in">'+
     '<div class="mt">'+(isLogin?'Welcome Back':'Create Account')+'</div>'+
     '<div class="ms">'+(isLogin?'Sign in to book a table & order online.':'Join the MOOD today — it takes less than a minute.')+'</div>'+
     googleAuthHtml()+
@@ -552,9 +556,11 @@ function openAuth(mode){
     '<label>Password<input id="auPass" type="password"></label>'+
     '<div class="err" id="auErr"></div>'+
     '<button class="auth-btn" onclick="submitAuth(\''+mode+'\')">'+(isLogin?'Login':'Create Account')+'</button>'+
-    '<div class="swap">'+(isLogin?'No account? <b onclick="openAuth(\'signup\')">Sign up free</b>':'Have an account? <b onclick="openAuth(\'login\')">Login</b>')+'</div>';
+    '<div class="swap">'+(isLogin?'No account? <b onclick="openAuth(\'signup\')">Sign up free</b>':'Have an account? <b onclick="openAuth(\'login\')">Login</b>')+'</div>'+
+    '</div></div></div>';
   document.getElementById('authOvl').classList.add('open');
   document.getElementById('authBox').classList.add('open');
+  moodAuthMediaInit();
 }
 function closeAuth(){
   document.getElementById('authOvl').classList.remove('open');
@@ -670,25 +676,6 @@ document.getElementById('resForm').addEventListener('submit',async function(e){
     if(u)a.href=u;
   });
 })();
-document.getElementById('resForm').addEventListener('submit',async function(e){
-  e.preventDefault();
-  var msg=document.getElementById('rsMsg');
-  try{
-    var r=await fetch('/api/reservations',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        name:document.getElementById('rsName').value,
-        phone:document.getElementById('rsPhone').value,
-        guests:document.getElementById('rsGuests').value,
-        date:document.getElementById('rsDate').value,
-        time:document.getElementById('rsTime').value
-      })});
-    var j=await r.json();
-    if(j.ok){
-      msg.textContent='Table reserved! We look forward to seeing you. ☕';
-      msg.style.color='var(--gl)'; this.reset();
-    }else{ msg.textContent=j.error||'Something went wrong. Please try again.'; msg.style.color='#e07070'; }
-  }catch(err){ msg.textContent='Something went wrong. Please try again.'; msg.style.color='#e07070'; }
-});
 var lastMenuSig='';
 var lastMapAddr='';
 function applyImages(im){

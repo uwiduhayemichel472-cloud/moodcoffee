@@ -208,4 +208,22 @@ select{appearance:auto}
 .ai-txt.typing i{width:7px;height:7px;border-radius:50%;background:#c8956c;animation:aiBlink 1.2s infinite}
 .ai-txt.typing i:nth-child(2){animation-delay:.2s}
 .ai-txt.typing i:nth-child(3){animation-delay:.4s}
+
+/* Auth Video (Login / Sign-up screen) */
+.a-btn.gold{background:linear-gradient(135deg,#7a4a12,#5c2e0a);color:#fff;border-color:transparent}
+.a-btn.gold:hover{background:linear-gradient(135deg,#8f5a18,#6a3510);color:#fff}
+.av-up{display:block;width:100%;padding:12px 14px;margin-bottom:10px;font-size:.76rem;color:#5c2e0a;background:#faf7f4;border:1px dashed #c8956c;border-radius:8px;cursor:pointer;text-align:center;transition:border-color .2s,background .2s}
+.av-up:hover{border-color:#5c2e0a;background:#fff}
+.av-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.av-card{background:#fff;border:1px solid #e8ddd3;border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.av-prev{width:100%;aspect-ratio:16/9;object-fit:cover;background:#1a0a00;display:block}
+.av-meta{padding:12px 14px 6px}
+.av-meta b{font-size:.86rem;color:#2a1a0e;display:block;overflow-wrap:anywhere}
+.av-state{display:inline-block;margin-top:4px;font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;color:#999}
+.av-state.live{color:#2e8b57;font-weight:600}
+.av-meta small{display:block;margin-top:4px;font-size:.7rem;color:#9a8b7b}
+.av-acts{display:flex;gap:8px;padding:8px 14px 14px;flex-wrap:wrap}
+@media(max-width:820px){
+  .av-grid{grid-template-columns:1fr}
+}
 @keyframes aiBlink{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}

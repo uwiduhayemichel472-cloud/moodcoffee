@@ -319,6 +319,8 @@ window.addEventListener('message', function (e) {
 function auth(m) {
   if (m === 'signup' && S.settings.toggles.reg === false) { toast(T('auth_reg_paused')); return; }
   $('#authContent').innerHTML =
+    '<div class="mood-auth-split">' + moodAuthMediaHtml() +
+    '<div class="mood-auth-form"><div class="mood-auth-in">' +
     '<div class="mt">' + (m === 'login' ? T('auth_welcome') : T('auth_create')) + '</div>' +
     '<div class="ms">' + (m === 'login' ? T('auth_signin') : T('auth_join')) + '</div>' +
     googleAuthHtml() +
@@ -328,8 +330,10 @@ function auth(m) {
     '<label>' + T('auth_pass') + '<input id="auPass" type="password"></label>' +
     '<div class="err" id="auErr"></div>' +
     '<button class="auth-btn" onclick="submitAuth(\'' + m + '\')">' + (m === 'login' ? T('auth_login_btn') : T('auth_create_btn')) + '</button>' +
-    '<div class="swap">' + (m === 'login' ? T('auth_no_account') + ' <b onclick="auth(\'signup\')">' + T('auth_signup_free') + '</b>' : T('auth_have_account') + ' <b onclick="auth(\'login\')">' + T('auth_login2') + '</b>') + '</div>';
+    '<div class="swap">' + (m === 'login' ? T('auth_no_account') + ' <b onclick="auth(\'signup\')">' + T('auth_signup_free') + '</b>' : T('auth_have_account') + ' <b onclick="auth(\'login\')">' + T('auth_login2') + '</b>') + '</div>' +
+    '</div></div></div>';
   $('#authOvl').classList.add('open'); $('#authBox').classList.add('open');
+  moodAuthMediaInit();
 }
 function closeAuth() { $('#authOvl').classList.remove('open'); $('#authBox').classList.remove('open'); }
 
@@ -440,13 +444,23 @@ function renderCheckout() {
   if (!S.cart.length) { go('menu'); return; }
   if (!S.user) { toast(T('shop_please_login')); auth('login'); return; }
   S.promo = null;
-  const keys = Object.keys(PAY).filter(k => S.settings.toggles[k] !== false && (k !== 'card' || !!S.settings.flwEncKey));
-  if (!keys.length) { toast(T('shop_payments_paused')); go('menu'); return; }
-  if (keys.indexOf(S.pay) === -1) S.pay = keys[0];
-  $('#payOpts').innerHTML = keys.map(k =>
-    '<div class="po' + (S.pay === k ? ' sel' : '') + '" data-k="' + k + '" onclick="pickPay(\'' + k + '\')"><div class="pl" style="background:' + PAY[k].bg + ';color:' + (PAY[k].fg || '#fff') + ';display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:.56rem;font-weight:700;letter-spacing:.06em">' + PAY[k].name.toUpperCase() + '</div><div><b>' + PAY[k].name + '</b><span>' + PAY[k].tag + '</span></div></div>').join('');
+  const online = !!S.settings.onlinePay;
+  if (online) {
+    const keys = Object.keys(PAY).filter(k => S.settings.toggles[k] !== false && (k !== 'card' || !!S.settings.flwEncKey));
+    if (!keys.length) { toast(T('shop_payments_paused')); go('menu'); return; }
+    if (keys.indexOf(S.pay) === -1) S.pay = keys[0];
+    $('#payOpts').innerHTML = keys.map(k =>
+      '<div class="po' + (S.pay === k ? ' sel' : '') + '" data-k="' + k + '" onclick="pickPay(\'' + k + '\')"><div class="pl" style="background:' + PAY[k].bg + ';color:' + (PAY[k].fg || '#fff') + ';display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:.56rem;font-weight:700;letter-spacing:.06em">' + PAY[k].name.toUpperCase() + '</div><div><b>' + PAY[k].name + '</b><span>' + PAY[k].tag + '</span></div></div>').join('');
+    $('#payNote').textContent = T('co_secure');
+    $('#placeBtn').textContent = T('shop_placed');
+  } else {
+    $('#payOpts').innerHTML =
+      '<div class="po"><div class="pl" style="background:#2c1200;color:#d4a060;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:.56rem;font-weight:700;letter-spacing:.06em">CASH</div>' +
+      '<div><b>' + T('co_pay_on_delivery') + '</b><span>' + T('co_pay_on_delivery_tag') + '</span></div></div>';
+    $('#payNote').textContent = T('co_pay_on_delivery_note');
+    $('#placeBtn').textContent = T('shop_placed_cash');
+  }
   $('#payField').innerHTML = '';
-  $('#payNote').textContent = S.settings.onlinePay ? T('co_secure') : T('co_demo_note');
   S.points = 0; S.gift = null;
   renderLoyalty(); renderGiftField();
   renderTotals();
@@ -536,14 +550,16 @@ async function placeOrder() {
   const phone = $('#coPhone').value.trim(), addr = $('#coAddr').value.trim();
   if (!phone || !addr) { toast(T('shop_enter_phone')); return; }
   const btn = $('#placeBtn'); btn.disabled = true; btn.textContent = T('shop_processing');
+  const online = !!S.settings.onlinePay;
+  const payment = online ? S.pay : 'cash';
   let card = null;
   try {
-    if (S.pay === 'card') card = await cardPayload();
-  } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = T('shop_placed'); return; }
-  const momoPhone = (S.pay === 'mtn' || S.pay === 'airtel') && $('#pcMoMo') ? $('#pcMoMo').value.trim() : '';
+    if (online && payment === 'card') card = await cardPayload();
+  } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = online ? T('shop_placed') : T('shop_placed_cash'); return; }
+  const momoPhone = online && (payment === 'mtn' || payment === 'airtel') && $('#pcMoMo') ? $('#pcMoMo').value.trim() : '';
   try {
     const j = await api('/api/orders', { method: 'POST', body: JSON.stringify({
-      cart: S.cart, phone, address: addr, notes: $('#coNotes').value, payment: S.pay, promo: S.promo ? S.promo.code : '',
+      cart: S.cart, phone, address: addr, notes: $('#coNotes').value, payment, promo: S.promo ? S.promo.code : '',
       points: S.points || 0, gift: S.gift ? S.gift.code : '', payPhone: momoPhone, card
     }) });
     if (j.need_payment) {
@@ -560,7 +576,7 @@ async function placeOrder() {
       (j.pointsEarned ? '<br>You earned <b style="color:var(--gold)">' + j.pointsEarned + ' loyalty points</b>!' : '') +
       (j.rewardsIssued && j.reward ? '<br>🎉 ' + esc(j.reward.title) + ' unlocked — code <b style="color:var(--gold)">' + esc(j.reward.code) + '</b>. Find it in your account.' : '');
     go('success');
-  } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = T('shop_placed'); }
+  } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = online ? T('shop_placed') : T('shop_placed_cash'); }
 }
 
 // ─── Card encryption (Flutterwave v4 AesGcm) ───
