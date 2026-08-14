@@ -33,8 +33,8 @@ const PROVIDERS = {
   gemini: {
     key: () => process.env.GEMINI_API_KEY || '',
     url: k => 'https://generativelanguage.googleapis.com/v1beta/models/' +
-      (process.env.LLM_MODEL || 'gemini-1.5-flash') + ':generateContent?key=' + k,
-    model: 'gemini-1.5-flash',
+      (process.env.LLM_MODEL || 'gemini-flash-latest') + ':generateContent?key=' + k,
+    model: 'gemini-flash-latest',
     headers: () => ({ 'Content-Type': 'application/json' }),
     build: (model, sys, usr) => ({
       system_instruction: { parts: [{ text: sys }] },
