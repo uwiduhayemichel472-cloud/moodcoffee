@@ -237,12 +237,18 @@ label input:focus{border-color:var(--gold)}
 .ocempty .ab{padding:11px 26px;font-size:.68rem;position:relative}
 .och{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .oid{font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(245,230,211,.4)}
+.oid .odt{letter-spacing:.06em;text-transform:none;color:rgba(245,230,211,.3)}
 .ost{padding:4px 12px;border-radius:16px;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;font-weight:500}
 .st-Delivered{background:rgba(45,106,79,.22);color:#6fcf97;border:1px solid rgba(45,106,79,.4)}
 .st-Preparing{background:rgba(212,160,96,.14);color:var(--gl);border:1px solid rgba(212,160,96,.25)}
 .st-Pending{background:rgba(26,58,92,.25);color:#6fa8dc;border:1px solid rgba(26,58,92,.4)}
 .st-Cancelled{background:rgba(192,57,43,.14);color:#e07070;border:1px solid rgba(192,57,43,.3)}
-.ochip{display:inline-block;padding:5px 11px;background:rgba(255,255,255,.04);border:1px solid rgba(212,160,96,.12);border-radius:6px;font-size:.74rem;color:rgba(245,230,211,.65);margin:0 6px 8px 0}
+.oitems{margin:2px 0 12px}
+.oitem{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px dashed rgba(212,160,96,.1)}
+.oitem:last-child{border-bottom:none}
+.oin{flex:1;font-size:.84rem;font-weight:300;color:rgba(245,230,211,.75);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.oiq{font-size:.72rem;color:rgba(245,230,211,.4)}
+.oip{font-family:'Cormorant Garamond',serif;font-size:.95rem;color:var(--gl);min-width:64px;text-align:right}
 .otr{display:flex;justify-content:space-between;border-top:1px solid rgba(212,160,96,.08);padding-top:12px}
 .otl{font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(245,230,211,.4)}
 .otv{font-family:'Cormorant Garamond',serif;font-size:1.15rem;color:var(--gl)}

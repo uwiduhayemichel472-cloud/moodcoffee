@@ -386,10 +386,9 @@ async function buyGift() {
 async function openAcc() {
   const u = S.user; if (!u) return;
   const joined = u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-  let gcHtml = '<div class="accRow"><span>…</span><b>—</b></div>', resHtml = '', rwHtml = '';
+  let gcHtml = '<div class="accRow"><span>…</span><b>—</b></div>', resHtml = '';
   try { const gc = await api('/api/my-giftcards'); gcHtml = giftcardsHtml(gc.giftcards); } catch (e) {}
   try { const rs = await api('/api/my-reservations'); resHtml = rs.reservations.length ? rs.reservations.map(x => '<div class="accRow"><span>' + String(x.res_date).slice(0, 10) + ' ' + x.res_time + '</span><b>' + x.guests + ' guests · ' + x.status + '</b></div>').join('') : '<div class="accRow"><span>' + T('acc_res_none') + '</span><b>—</b></div>'; } catch (e) {}
-  try { const rw = await api('/api/my-rewards'); rwHtml = rewardsHtml(rw.rewards); } catch (e) {}
   $('#accContent').innerHTML =
     '<div class="mt">' + T('acc_title') + '</div>' +
     '<div class="ms">' + T('acc_profile') + ' ' + (S.settings.name || 'MOOD') + '</div>' +
@@ -398,14 +397,13 @@ async function openAcc() {
     '<div class="accRow"><span>' + T('acc_phone') + '</span><b>' + (u.phone || '—') + '</b></div>' +
     (joined ? '<div class="accRow"><span>' + T('acc_member') + '</span><b>' + joined + '</b></div>' : '') +
     loyaltyHtml() +
-    '<div class="ms">' + T('acc_rewards') + '</div>' + rwHtml +
     '<div class="ms">' + T('acc_gift_title') + ' <b class="acc-giftbtn" onclick="toggleGiftForm()">+ ' + T('acc_buy_gift') + '</b></div>' +
     '<div id="gcList">' + gcHtml + '</div>' +
     '<div class="gcform" id="gcBuyForm" style="display:none">' +
     '<label><span>' + T('acc_gift_amt') + '</span><input id="gcAmt" type="number" min="1" max="500" placeholder="10"></label>' +
     '<label><span>' + T('acc_gift_to') + '</span><input id="gcRec" placeholder="Aline"></label>' +
     '<label><span>' + T('acc_gift_mail') + '</span><input id="gcRecMail" type="email" placeholder="friend@example.com"></label>' +
-    '<label><span>' + T('acc_gift_msg') + '</span><input id="gcMsgTxt" placeholder="Enjoy your coffee! ☕"></label>' +
+    '<label><span>' + T('acc_gift_msg') + '</span><input id="gcMsgTxt" placeholder="Enjoy your coffee!"></label>' +
     '<p id="gcBuyMsg"></p>' +
     '<button class="auth-btn" id="gcBuyBtn" onclick="buyGift()">' + T('acc_gift_btn') + '</button></div>' +
     '<div class="ms">' + T('acc_bookings') + '</div>' + resHtml +
@@ -660,7 +658,7 @@ function trackHtml(o) {
   const steps = [T('ord_step1'), T('ord_step2'), T('ord_step3')];
   let h = '<div class="track' + (o.status === 'Pending' ? ' tr-pending' : '') + '">';
   steps.forEach((s, i) => {
-    h += '<div class="ts' + (i <= st ? ' on' : '') + (i === st ? ' cur' : '') + '"><i>' + (i < st ? '✓' : (i === st && o.status !== 'Pending' && st > 0 ? '' : '')) + '</i><span>' + s + '</span></div>';
+    h += '<div class="ts' + (i <= st ? ' on' : '') + (i === st ? ' cur' : '') + '"><i></i><span>' + s + '</span></div>';
     if (i < steps.length - 1) h += '<div class="tl' + (i < st ? ' on' : '') + '"></div>';
   });
   return h + '</div>';
@@ -669,12 +667,12 @@ function renderOrdersFrom(orders) {
   S.orders = orders;
   const stMap = { 'Preparing': T('ord_processing'), 'Delivered': T('ord_delivered'), 'Pending': T('ord_pending'), 'Cancelled': T('ord_cancelled') };
   $('#ordersList').innerHTML = orders.length ? orders.map(o =>
-    '<div class="oc"><div class="och"><div class="oid">' + o.id + ' · ' + new Date(o.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
+    '<div class="oc"><div class="och"><div class="oid">' + o.id + ' <span class="odt">' + new Date(o.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + '</span>' +
     '</div><span class="ost st-' + o.status + '">' + (stMap[o.status] || o.status) + '</span></div>' +
     trackHtml(o) +
-    '<div class="oitems">' + o.items.map(i => '<span class="ochip">' + i.emoji + ' ' + i.name + ' ×' + i.qty + '</span>').join('') + '</div>' +
-    '<div class="otr"><span class="otl">' + o.payment.toUpperCase() + '</span><span class="otv">' + money(o.total) + '</span>' +
-    (o.status !== 'Cancelled' && o.status !== 'Pending' ? '<button class="reorder" onclick="reorder(\'' + o.id + '\')">↻ ' + T('ord_reorder') + '</button>' : '') + '</div></div>').join('')
+    '<div class="oitems">' + o.items.map(i => '<div class="oitem"><span class="oin">' + esc(i.name) + '</span><span class="oiq">×' + i.qty + '</span><span class="oip">' + money(Number(i.price || 0) * i.qty) + '</span></div>').join('') + '</div>' +
+    '<div class="otr"><span class="otl">' + (o.payment || '').toUpperCase() + '</span><span class="otv">' + money(o.total) + '</span>' +
+    (o.status !== 'Cancelled' && o.status !== 'Pending' ? '<button class="reorder" onclick="reorder(\'' + o.id + '\')">' + T('ord_reorder') + '</button>' : '') + '</div></div>').join('')
     : '<div class="ocempty">' + EMPTY_IMG + '<b>' + T('ord_empty_title') + '</b><p>' + T('ord_empty_sub') + '</p><button class="ab" onclick="go(\'menu\')">' + T('ord_browse') + '</button></div>';
 }
 function reorder(ref) {
