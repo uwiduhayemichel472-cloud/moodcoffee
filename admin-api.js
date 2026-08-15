@@ -239,7 +239,11 @@ r.get('/orders', perm('orders'), async (req, res) => {
   try {
     const rows = await q(`SELECT o.*, COALESCE(cu.name,o.customer_name) customer FROM orders o
       LEFT JOIN customers cu ON cu.id=o.user_id ORDER BY o.created_at DESC`);
-    const items = await q('SELECT order_id, name, price, qty, emoji FROM order_items');
+    const items = await q(`SELECT oi.order_id, oi.name, oi.price, oi.qty, oi.emoji,
+      c.name cat_name, c.service
+      FROM order_items oi
+      LEFT JOIN products p ON p.id = oi.product_id
+      LEFT JOIN categories c ON c.id = p.cat_id`);
     const m = new Map();
     items.forEach(i => {
       if (!m.has(i.order_id)) m.set(i.order_id, []);
@@ -639,23 +643,101 @@ r.delete('/giftcards/:id', perm('giftcards'), async (req, res) => {
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ---------- CSV export ----------
+// ---------- CSV / Excel / PDF export ----------
+const escCsv = v => {
+  const s = v == null ? '' : String(v);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+};
+const escXls = v => String(v == null ? '' : v).replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+const numFmt = v => {
+  const n = Number(v);
+  if (!isFinite(n)) return String(v == null ? '' : v);
+  return n.toLocaleString('en-US');
+};
+
 r.get('/export/:type', perm('reports'), async (req, res) => {
   try {
     const t = req.params.type;
-    let csv = '';
+    const fmt = String(req.query.format || 'csv').toLowerCase();
+    let headers = [], rows = [];
     if (t === 'orders') {
-      const rows = await q('SELECT ref,customer_name,phone,address,total,payment,status,created_at FROM orders ORDER BY created_at DESC');
-      csv = 'ref,customer,phone,address,total,payment,status,date\n' + rows.map(o =>
-        [o.ref, o.customer_name, o.phone, '"' + (o.address || '') + '"', o.total, o.payment, o.status, o.created_at].join(',')).join('\n');
+      const r = await q('SELECT ref,customer_name,phone,address,total,payment,status,created_at FROM orders ORDER BY created_at DESC');
+      headers = ['Reference', 'Customer', 'Phone', 'Address', 'Total', 'Payment', 'Status', 'Date'];
+      rows = r.map(o => [o.ref, o.customer_name, o.phone, o.address || '', o.total, o.payment, o.status, o.created_at]);
     } else if (t === 'customers') {
-      const rows = await q('SELECT name,email,created_at FROM customers ORDER BY created_at DESC');
-      csv = 'name,email,joined\n' + rows.map(u => [u.name, u.email, u.created_at].join(',')).join('\n');
+      const r = await q('SELECT name,email,created_at FROM customers ORDER BY created_at DESC');
+      headers = ['Name', 'Email', 'Joined'];
+      rows = r.map(u => [u.name, u.email, u.created_at]);
     } else if (t === 'products') {
-      const rows = await q('SELECT name,price,available FROM products ORDER BY id');
-      csv = 'name,price,available\n' + rows.map(p => [p.name, p.price, p.available ? 'yes' : 'no'].join(',')).join('\n');
+      const r = await q('SELECT name,price,available FROM products ORDER BY id');
+      headers = ['Name', 'Price', 'Available'];
+      rows = r.map(p => [p.name, p.price, p.available ? 'yes' : 'no']);
     } else return res.status(404).json({ error: 'Unknown export.' });
-    res.setHeader('Content-Type', 'text/csv');
+
+    if (fmt === 'xlsx') {
+      const html = '<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head>' +
+        '<body><table border="1"><tr>' + headers.map(h => '<th style="background:#f0e6da">' + escXls(h) + '</th>').join('') + '</tr>' +
+        rows.map(rr => '<tr>' + rr.map(c => '<td>' + escXls(c) + '</td>').join('') + '</tr>').join('') +
+        '</table></body></html>';
+      res.setHeader('Content-Type', 'application/vnd.ms-excel; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename=' + t + '.xls');
+      return res.send(html);
+    }
+
+    if (fmt === 'pdf') {
+      let PDFDocument;
+      try { PDFDocument = require('pdfkit'); }
+      catch (e) { return res.status(500).json({ error: 'PDF export is not installed yet.' }); }
+      const doc = new PDFDocument({ size: 'A4', margin: 36 });
+      const chunks = [];
+      doc.on('data', c => chunks.push(c));
+      const done = new Promise(resolve => doc.on('end', resolve));
+      const gold = '#d4a060', cream = '#f5e6d3', dark = '#1a0a00', body = '#2c1206', faint = '#7a5c44';
+      doc.rect(0, 0, 595.28, 86).fill(dark);
+      doc.fillColor(gold).font('Helvetica-Bold').fontSize(20).text('MOOD Coffee Shop & Bakery', 36, 20);
+      doc.fillColor(cream).font('Helvetica').fontSize(10)
+        .text((t.charAt(0).toUpperCase() + t.slice(1)) + ' report — generated ' + new Date().toLocaleString('en-US'), 36, 52);
+      // Table layout
+      const cols = headers.map(h => ({ h, w: 0 }));
+      rows.forEach(rr => rr.forEach((c, i) => { cols[i].w = Math.max(cols[i].w, Math.min(52, String(c).length)); }));
+      const width = 595.28 - 72;
+      const total = cols.reduce((s, c) => s + c.w, 0) || 1;
+      cols.forEach(c => c.w = Math.max(38, Math.round(c.w / total * width)));
+      const pad = 4, rowH = 17, headH = 19;
+      let x = 36, y = 106;
+      // Header row
+      doc.fillColor('#2a1206').rect(x, y, width, headH).fill();
+      cols.forEach(c => { doc.fillColor(gold).font('Helvetica-Bold').fontSize(8.5).text(c.h.toUpperCase(), x + pad, y + 5, { width: c.w - pad * 2 }); x += c.w; });
+      y += headH;
+      // Body rows
+      rows.forEach((rr, i) => {
+        if (y > 760) { doc.addPage(); y = 40; }
+        doc.fillColor(i % 2 ? '#faf6f1' : '#ffffff').rect(36, y, width, rowH).fill();
+        x = 36;
+        rr.forEach((c, j) => {
+          const col = cols[j];
+          const isNum = (j === 4 && t === 'orders') || (j === 1 && t === 'products'); // total / price columns
+          const val = isNum ? numFmt(c) : String(c == null ? '' : c);
+          const maxChars = Math.max(1, Math.floor((col.w - pad * 2) / 4.4));
+          const text = val.length > maxChars ? val.slice(0, maxChars - 1) + '…' : val;
+          doc.font(isNum ? 'Helvetica-Bold' : 'Helvetica').fontSize(8).fillColor(isNum ? '#1a0a00' : '#3a2415')
+            .text(text, x + pad, y + 5, { width: col.w - pad * 2, lineBreak: false });
+          x += col.w;
+        });
+        y += rowH;
+      });
+      // Footer
+      doc.fillColor(faint).font('Helvetica').fontSize(8).text(rows.length + ' records', 36, y + 12);
+      doc.end();
+      await done;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=' + t + '.pdf');
+      return res.send(Buffer.concat(chunks));
+    }
+
+    // default: CSV
+    const csv = headers.join(',') + '\n' + rows.map(rr => rr.map(escCsv).join(',')).join('\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename=' + t + '.csv');
     res.send(csv);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -870,8 +952,11 @@ r.post('/auth-videos/:id/activate', perm('settings'), async (req, res) => {
 r.delete('/auth-videos/:id', perm('settings'), async (req, res) => {
   try {
     const id = Number(req.params.id);
+    if (!Number.isFinite(id) || id < 1) return res.status(400).json({ error: 'Invalid video id.' });
     const rows = await q('SELECT url FROM auth_videos WHERE id=?', [id]);
-    if (!rows.length) return res.status(404).json({ error: 'Video not found.' });
+    // Idempotent delete: deleting an already-removed video is not an error, so
+    // the panel never shows a confusing "Video not found" on a stale row.
+    if (!rows.length) return res.json({ ok: true, already: true });
     await q('DELETE FROM auth_videos WHERE id=?', [id]);
     const url = rows[0].url || '';
     if (url.startsWith('/auth-videos/')) {

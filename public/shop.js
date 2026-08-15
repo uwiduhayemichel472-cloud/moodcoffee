@@ -76,7 +76,7 @@ async function init() {
   } else if (pendingRef) {
     showPaying(pendingRef);
   } else if (payFail) {
-    showFailed(T('shop_pay_cancelled'));
+    showFailed('');
   } else {
     openService();
   }
@@ -455,11 +455,13 @@ function renderCheckout() {
     $('#placeBtn').textContent = T('shop_placed');
   } else {
     $('#payOpts').innerHTML =
-      '<div class="po"><div class="pl" style="background:#2c1200;color:#d4a060;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:.56rem;font-weight:700;letter-spacing:.06em">CASH</div>' +
+      '<div class="po sel"><div class="pl" style="background:#2c1200;color:#d4a060;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:.56rem;font-weight:700;letter-spacing:.06em">CASH</div>' +
       '<div><b>' + T('co_pay_on_delivery') + '</b><span>' + T('co_pay_on_delivery_tag') + '</span></div></div>';
     $('#payNote').textContent = T('co_pay_on_delivery_note');
     $('#placeBtn').textContent = T('shop_placed_cash');
   }
+  const cod = $('#codPanel');
+  if (cod) cod.style.display = online ? 'none' : 'block';
   $('#payField').innerHTML = '';
   S.points = 0; S.gift = null;
   renderLoyalty(); renderGiftField();
@@ -566,7 +568,7 @@ async function placeOrder() {
       S.pendingPay = j.ref;
       btn.disabled = false; btn.textContent = T('shop_placed');
       if (j.payment_link) { window.location.href = j.payment_link; return; }
-      showPaying(j.ref, j.instruction);
+      showPaying(j.ref, j.instruction, j.total);
       return;
     }
     S.cart = []; saveCart(); $('#cartCount').textContent = 0;
@@ -613,10 +615,10 @@ async function cardPayload() {
 
 // ─── "Check your phone" waiting screen (mobile-money push) ───
 let payPoll = null;
-function showPaying(ref, instruction) {
+function showPaying(ref, instruction, amount) {
   S.pendingPay = ref;
   $('#payRef').textContent = ref;
-  $('#payStatus').textContent = T('pay_awaiting');
+  if (amount != null) $('#payAmount').textContent = money(amount);
   const inst = $('#payInst');
   if (instruction && inst) { inst.textContent = instruction; inst.style.display = 'block'; }
   go('paying');
@@ -633,7 +635,7 @@ function showPaying(ref, instruction) {
         go('success');
       } else if (j.failed) {
         clearInterval(payPoll);
-        showFailed((j.reason ? esc(j.reason) + '<br><br>' : '') + T('shop_pay_cancelled'));
+        showFailed(j.reason ? esc(j.reason) : '');
       }
     } catch (e) {}
   }, 4000);
@@ -642,7 +644,8 @@ function showPaying(ref, instruction) {
 // Persistent "payment not completed" screen — stays until the customer
 // dismisses it themselves (no auto-timer). Cart is left intact to retry.
 function showFailed(msg) {
-  $('#failMsg').innerHTML = msg || T('shop_pay_cancelled');
+  const r = $('#failMsg');
+  if (msg) { r.innerHTML = msg; r.style.display = 'block'; } else r.style.display = 'none';
   go('failed');
 }
 function retryPayment() {

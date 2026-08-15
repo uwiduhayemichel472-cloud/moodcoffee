@@ -56,6 +56,7 @@ h1 em{font-style:italic;color:var(--gl);display:block}
 .a-btn:hover{background:var(--gl)}
 .g-btn{background:transparent;color:var(--cream);border:1px solid rgba(245,230,211,.3)}
 .g-btn:hover{border-color:var(--gold);color:var(--gold)}
+.a-btn svg,.g-btn svg{width:16px;height:16px;vertical-align:-2px;margin-right:9px;display:inline-block}
 @keyframes up{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
 @keyframes upc{from{opacity:0;transform:translate(-50%,calc(-50% + 26px))}to{opacity:1;transform:translate(-50%,-50%)}}
 .mq{background:var(--gold);padding:12px 0;overflow:hidden;white-space:nowrap}
@@ -284,8 +285,8 @@ footer li a:hover{color:var(--gl)}
     <h1><span data-i18n="hero_title1">Good Coffee.</span><em data-i18n="hero_title2">Great Mood.</em></h1>
     <p class="sub" data-i18n="hero_sub">Freshly roasted single-origin coffee and baked-from-scratch pastries, served warm with a side of good energy — right here in Kigali.</p>
     <div class="acts">
-      <a class="a-btn" href="/shop" data-i18n="hero_order">Order Now</a>
-      <a class="g-btn" href="#menu" data-i18n="hero_menu">See the Menu</a>
+      <a class="a-btn" href="/shop"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c2.6 2.7 3.9 5.7 3.9 9s-1.3 6.3-3.9 9c-2.6-2.7-3.9-5.7-3.9-9S9.4 4.7 12 2Z"/><path d="M9.9 6.5c2 .5 3.8 1.4 5.1 2.9-.1 2.6-1 5.3-2.8 7.4-2-.5-3.8-1.4-5.1-2.9.1-2.6 1-5.3 2.8-7.4Z" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".65"/></svg><span data-i18n="hero_order">Order Now</span></a>
+      <a class="g-btn" href="#menu"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c2.6 2.7 3.9 5.7 3.9 9s-1.3 6.3-3.9 9c-2.6-2.7-3.9-5.7-3.9-9S9.4 4.7 12 2Z"/><path d="M9.9 6.5c2 .5 3.8 1.4 5.1 2.9-.1 2.6-1 5.3-2.8 7.4-2-.5-3.8-1.4-5.1-2.9.1-2.6 1-5.3 2.8-7.4Z" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".65"/></svg><span data-i18n="hero_menu">See the Menu</span></a>
     </div>
   </div>
 </section>
@@ -501,9 +502,11 @@ document.getElementById('nlForm').addEventListener('submit',async function(e){
       body:JSON.stringify({name:document.getElementById('nlName').value,email:document.getElementById('nlEmail').value})});
     var j=await r.json();
     if(j.ok){
-      msg.textContent=j.mailOk
-        ? 'Thanks for joining the MOOD! Your details have been sent straight to our team. ☕'
-        : 'Welcome to the MOOD! We\'ve saved your details — we\'ll be in touch soon.';
+      msg.textContent=j.welcomeOk
+        ? 'Welcome to the MOOD! Check your inbox for a personal welcome and recommendation. ☕'
+        : (j.mailOk
+          ? 'Thanks for joining the MOOD! Your details have been sent straight to our team. ☕'
+          : 'Welcome to the MOOD! We\'ve saved your details — we\'ll be in touch soon.');
       msg.style.color='var(--gl)';
       this.reset();
     }else{
@@ -681,7 +684,16 @@ var lastMapAddr='';
 function applyImages(im){
   if(!im)return;
   var map={hero:'#hero .bg',about:'#about .img',quote:'#exp .bg',visit:'#visit .img'};
-  for(var k in map){ if(im[k]){ var el=document.querySelector(map[k]); if(el) el.style.backgroundImage="url('"+im[k]+"')"; } }
+  for(var k in map){
+    if(!im[k])continue;
+    (function(sel,src){
+      var el=document.querySelector(sel); if(!el)return;
+      var img=new Image();
+      img.onload=function(){ el.style.backgroundImage="url('"+src+"')"; };
+      img.onerror=function(){ /* keep the current backdrop — no broken flash */ };
+      img.src=src;
+    })(map[k],im[k]);
+  }
 }
 function applySettings(d){
   if(d.settings.phone)document.getElementById('lPhone').textContent=d.settings.phone;
@@ -727,6 +739,12 @@ loadMenu();
 setInterval(loadMenu,30000);
 /* ─── Trending carousel ─── */
 var _tInt=null;
+function trendAuto(strip,on){
+  clearInterval(_tInt);
+  if(!on||!strip)return;
+  if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  _tInt=setInterval(function(){trendTick(strip);},3800);
+}
 function loadTrending(){
   fetch('/api/trending').then(function(r){return r.json();}).then(function(j){
     var strip=document.getElementById('trendStrip'); if(!strip)return;
@@ -740,13 +758,20 @@ function loadTrending(){
         '<div class="tp"><span>'+(window._curSym||'$')+Number(p.price).toFixed(window._curDec!==undefined?window._curDec:2)+'</span><em>'+Number(p.sold||0)+' sold</em></div>'+
         '</a>';
     }).join('');
-    clearInterval(_tInt);
-    if(items.length>1&&strip.scrollWidth>strip.clientWidth){
-      _tInt=setInterval(function(){trendTick(strip);},3800);
-      strip.addEventListener('mouseenter',function(){clearInterval(_tInt);});
-      strip.addEventListener('mouseleave',function(){clearInterval(_tInt);_tInt=setInterval(function(){trendTick(strip);},3800);});
-      strip.addEventListener('touchstart',function(){clearInterval(_tInt);},{passive:true});
+    var canAuto=items.length>1&&strip.scrollWidth>strip.clientWidth;
+    strip.onmouseenter=function(){trendAuto(strip,false);};
+    strip.onmouseleave=function(){trendAuto(strip,canAuto);};
+    strip.onfocusin=function(){trendAuto(strip,false);};
+    strip.onfocusout=function(){trendAuto(strip,canAuto);};
+    strip.ontouchstart=function(){trendAuto(strip,false);};
+    strip.ontouchend=function(){trendAuto(strip,canAuto);};
+    document.addEventListener('visibilitychange',function(){trendAuto(strip,!document.hidden&&canAuto);});
+    if('IntersectionObserver' in window){
+      new IntersectionObserver(function(es){
+        es.forEach(function(en){ trendAuto(strip,en.isIntersecting&&canAuto&&!document.hidden); });
+      },{threshold:.1}).observe(strip);
     }
+    trendAuto(strip,canAuto&&!document.hidden);
   }).catch(function(){});
 }
 function trendTick(strip){

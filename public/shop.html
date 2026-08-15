@@ -52,6 +52,13 @@
           <p class="lbl" data-i18n="co_payment">Payment Method</p>
           <div id="payOpts"></div>
           <div id="payField"></div>
+          <div class="cod-panel" id="codPanel" style="display:none">
+            <div class="cod-t" data-i18n="co_cod_title">How your order works</div>
+            <div class="cod-step"><span class="cs-n">1</span><span class="cs-t" data-i18n="co_cod_s1">Fill in your phone number and delivery address above.</span></div>
+            <div class="cod-step"><span class="cs-n">2</span><span class="cs-t" data-i18n="co_cod_s2">Review your order, then tap “Place Order”.</span></div>
+            <div class="cod-step"><span class="cs-n">3</span><span class="cs-t" data-i18n="co_cod_s3">We prepare your order and deliver it to you.</span></div>
+            <div class="cod-step"><span class="cs-n">4</span><span class="cs-t" data-i18n="co_cod_s4">Pay in cash when your order reaches you.</span></div>
+          </div>
         </div>
         <div class="box" id="loyBox"><div id="loyField"></div></div>
         <div class="box" id="gcBox"><div id="gcField"></div><span id="gcMsg" class="gcmsg"></span></div>
@@ -73,14 +80,32 @@
   </section>
 
   <section id="payingView" style="display:none">
-    <div class="wrap ok">
-      <div class="cup">📱</div>
+    <div class="wrap ok pay-wrap">
+      <div class="pphone" aria-hidden="true">
+        <div class="pp-body">
+          <div class="pp-notch"></div>
+          <div class="pp-screen">
+            <div class="pp-brand">MOOD<em>.</em></div>
+            <div class="pp-amt" id="payAmount">&nbsp;</div>
+            <div class="pp-check">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="#d4a060" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="pp-sub" data-i18n="pay_step2">Payment requested</div>
+          </div>
+        </div>
+      </div>
       <h2 data-i18n="pay_title">Payment Pending</h2>
-      <p data-i18n="pay_instruction">Confirm the payment on your phone to finish your order.</p>
-      <p id="payInst" style="display:none;color:#7a5c44"></p>
+      <p class="pay-lead" data-i18n="pay_instruction">Check your phone and approve the payment to finish your order.</p>
+      <div class="pay-steps">
+        <div class="pstep on"><i>✓</i><span data-i18n="pay_step1">Order placed</span></div>
+        <div class="pstep-line on"></div>
+        <div class="pstep cur"><i>…</i><span data-i18n="pay_step2">Payment requested</span></div>
+        <div class="pstep-line"></div>
+        <div class="pstep"><i></i><span data-i18n="pay_step3">Confirmed</span></div>
+      </div>
       <p class="payref">Order <b id="payRef"></b></p>
-      <p id="payStatus"></p>
-      <button class="buy-btn" onclick="openService()" data-i18n="shop_order_more">Order More</button>
+      <p class="pay-inst" id="payInst" style="display:none"></p>
+      <button class="buy-btn buy-wide" onclick="openService()" data-i18n="shop_order_more">Order More</button>
     </div>
   </section>
 
@@ -101,12 +126,26 @@
   </section>
 
   <section id="failedView" style="display:none">
-    <div class="wrap ok">
-      <div class="cup">⚠️</div>
+    <div class="wrap ok fail-wrap">
+      <div class="fail-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9.2" stroke="#d4a060" stroke-width="1.2" opacity=".4"/>
+          <path d="M8.6 8.6l6.8 6.8M15.4 8.6l-6.8 6.8" stroke="#e8c080" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+      </div>
       <h2 data-i18n="pay_failed_title">Payment Not Completed</h2>
-      <p id="failMsg"></p>
-      <button class="buy-btn" onclick="retryPayment()" data-i18n="pay_try_again">Try Again</button>
-      <button class="buy-btn" style="margin-left:8px" onclick="go('menu')" data-i18n="shop_order_more">Order More</button>
+      <p class="fail-lead" data-i18n="pay_failed_lead">No money was taken from your account — your cart is still here.</p>
+      <div class="fail-reason" id="failMsg" style="display:none"></div>
+      <div class="fail-list">
+        <div class="fail-it" data-i18n="pay_failed_reason1">Check your phone and approve the payment prompt when it appears.</div>
+        <div class="fail-it" data-i18n="pay_failed_reason2">Make sure the number is registered for mobile money.</div>
+        <div class="fail-it" data-i18n="pay_failed_reason3">Try again, or choose another payment method.</div>
+      </div>
+      <div class="fail-cta">
+        <button class="buy-btn" onclick="retryPayment()" data-i18n="pay_try_again">Try Again</button>
+        <a class="buy-ghost" onclick="retryPayment()" data-i18n="pay_other_method">Choose another payment method</a>
+      </div>
+      <button class="buy-link" onclick="go('menu')" data-i18n="shop_order_more">Order More</button>
     </div>
   </section>
 </main>

@@ -281,7 +281,30 @@ app.post('/api/newsletter', async (req, res) => {
           '</table><p style="color:#7a5c44;font-size:13px">Reach out and say hello — they want to hear from MOOD!</p></div>'
       });
     }
-    res.json({ ok: true, mailOk, shopEmail: mailOk ? shopEmail : '' });
+    // ── Welcome email straight to the new subscriber ──
+    const subName = name.trim() || email.toLowerCase();
+    let welcomeOk = false;
+    if (email) {
+      welcomeOk = await mailer.sendMail(st.smtp, {
+        to: email.toLowerCase(),
+        subject: 'Welcome to MOOD ☕ — your first sip is on us',
+        text: 'Hello ' + (name.trim() || 'coffee friend') + ',\n\n' +
+          'Welcome to the MOOD! You just joined our newsletter, so keep an eye on your inbox — ' +
+          'we share fresh roast drops, bakery news and subscriber-only offers here first.\n\n' +
+          'Not sure where to start? Ask our coffee guide in the chat on the homepage — it will ' +
+          'pick the perfect cup for you.\n\n' +
+          'See you soon,\nThe MOOD team\n' + (shopEmail || ''),
+        html: '<div style="font-family:Arial,sans-serif;color:#2a1206;max-width:560px;line-height:1.6">' +
+          '<h2 style="margin:0 0 6px">☕ Welcome to the MOOD!</h2>' +
+          '<p style="margin:0 0 16px;color:#7a5c44">Hi ' + (name.trim() || 'coffee friend') + ', your favourite roast just got a lot easier to find.</p>' +
+          '<p style="margin:0 0 16px">You\u2019re on the list now. We\u2019ll email you first about fresh roast drops, ' +
+          'new bakery treats and subscriber-only offers from ' + (shopEmail || 'our shop') + '.</p>' +
+          '<p style="margin:0 0 16px">Want a personal recommendation? Chat with our coffee guide on the homepage — ' +
+          'it\u2019ll pick the perfect cup for you.</p>' +
+          '<p style="margin:0;color:#7a5c44;font-size:13px">See you soon &mdash; The MOOD team ☕</p></div>'
+      });
+    }
+    res.json({ ok: true, mailOk, welcomeOk, shopEmail: mailOk ? shopEmail : '' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -906,11 +929,11 @@ app.get('/api/trending', async (req, res) => {
       JOIN categories c ON c.id=p.cat_id
       WHERE p.available=1 AND o.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
       GROUP BY p.id,p.cat_id,p.name,p.description,p.price,p.emoji,p.image,c.name,p.featured
-      ORDER BY sold DESC, p.id LIMIT 8`);
+      ORDER BY sold DESC, p.id LIMIT 6`);
     if (!rows.length) {
       rows = await q(`SELECT p.id,p.cat_id,p.name,p.description,p.price,p.emoji,p.image,c.name AS cat,p.featured,0 AS sold
         FROM products p JOIN categories c ON c.id=p.cat_id
-        WHERE p.available=1 ORDER BY p.featured DESC, p.id LIMIT 8`);
+        WHERE p.available=1 ORDER BY p.featured DESC, p.id LIMIT 6`);
     }
     res.json({ trending: rows.map(p => ({ id: p.id, cat: p.cat, name: p.name, price: Number(p.price), emoji: p.emoji, img: p.image, sold: Number(p.sold) || 0 })) });
   } catch (e) { res.status(500).json({ error: e.message }); }

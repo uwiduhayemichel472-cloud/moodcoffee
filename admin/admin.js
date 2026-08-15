@@ -354,7 +354,7 @@ async function loadOrders() {
     </table></div></div>`;
 }
 function ordRow(o) {
-  const its = o.items.map(i => `${esc(i.emoji || '')} ${i.qty}× ${esc(i.name)}`).join('<br>');
+  const its = o.items.map(i => `${ordIcon(i)} ${i.qty}× ${esc(i.name)}`).join('<br>');
   return `<tr data-ref="${esc((o.ref || '').toLowerCase())}" data-cust="${esc((o.user || '').toLowerCase())}" data-ph="${esc((o.phone || '').toLowerCase())}" data-st="${esc(o.status)}">
     <td><b>${esc(o.ref)}</b><br><small style="color:#7a5c44">${esc(o.address || '')}</small></td>
     <td>${esc(o.user)}<br><small style="color:#7a5c44">${esc(o.phone || '')}</small></td>
@@ -364,6 +364,15 @@ function ordRow(o) {
     <td><select style="width:130px;margin:0" onchange="setStatus(${o.id},this.value)">${['Preparing','Pending','Delivered','Cancelled'].map(s => `<option ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}</select></td>
     <td>${dt(o.date)}</td>
   </tr>`;
+}
+function ordIcon(i) {
+  const gold = 'color:var(--gold)';
+  const S = 'fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="15" height="15" style="' + gold + ';vertical-align:-2px;margin-right:2px"';
+  if ((i.service || '').toLowerCase() === 'coffee')
+    return `<svg viewBox="0 0 24 24" ${S}><path d="M17 8h1a4 4 0 1 1 0 8h-1"></path><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"></path><line x1="6" y1="2" x2="6" y2="4"></line><line x1="10" y1="2" x2="10" y2="4"></line><line x1="14" y1="2" x2="14" y2="4"></line></svg>`;
+  if ((i.service || '').toLowerCase() === 'bakery')
+    return `<svg viewBox="0 0 24 24" ${S}><path d="M3 11c0-4 4-7 9-7s9 3 9 7c0 2-1 3-2 3H5c-1 0-2-1-2-3Z"></path><path d="M8 17v1a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-1"></path></svg>`;
+  return `<svg viewBox="0 0 24 24" ${S}><rect x="3" y="8" width="18" height="4" rx="1"></rect><path d="M12 8v13"></path><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"></path></svg>`;
 }
 function fo() {
   const q = ($('oSearch') ? $('oSearch').value : '').toLowerCase();
@@ -777,9 +786,15 @@ async function loadReports() {
     <div class="kpi"><b>${r.customers}</b><span>Customers</span></div>
   </div>
   <div class="toolbar">
-    <button class="a-btn" onclick="location='/api/admin/export/orders'">Export orders CSV</button>
-    <button class="a-btn" onclick="location='/api/admin/export/customers'">Export customers CSV</button>
-    <button class="a-btn" onclick="location='/api/admin/export/products'">Export products CSV</button>
+    <button class="a-btn" onclick="location='/api/admin/export/orders'">Orders CSV</button>
+    <button class="a-btn" onclick="location='/api/admin/export/orders?format=pdf'">Orders PDF</button>
+    <button class="a-btn" onclick="location='/api/admin/export/orders?format=xlsx'">Orders Excel</button>
+    <button class="a-btn" onclick="location='/api/admin/export/customers'">Customers CSV</button>
+    <button class="a-btn" onclick="location='/api/admin/export/customers?format=pdf'">Customers PDF</button>
+    <button class="a-btn" onclick="location='/api/admin/export/customers?format=xlsx'">Customers Excel</button>
+    <button class="a-btn" onclick="location='/api/admin/export/products'">Products CSV</button>
+    <button class="a-btn" onclick="location='/api/admin/export/products?format=pdf'">Products PDF</button>
+    <button class="a-btn" onclick="location='/api/admin/export/products?format=xlsx'">Products Excel</button>
   </div>
   <div class="grid2">
     <div class="card2"><div class="hd"><b>Top products</b></div><div class="bd">${r.topProducts.map((p, i) => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0ece8;font-size:.84rem"><span>${i + 1}. ${esc(p.name)}</span><b style="color:#c8956c">${p.n} sold</b></div>`).join('') || '<p style="color:#888">No sales yet.</p>'}</div></div>
