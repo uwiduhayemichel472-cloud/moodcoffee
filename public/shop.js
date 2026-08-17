@@ -56,10 +56,10 @@ async function init() {
     I18N.setAvailableFromToggles(S.settings.toggles);
     renderSettings(); applyImages(d.images);
     try {
-      const add = localStorage.getItem('mood_add');
-      if (add) {
+      const pendingAdd = localStorage.getItem('mood_add');
+      if (pendingAdd) {
         localStorage.removeItem('mood_add');
-        const pid = JSON.parse(add).id;
+        const pid = JSON.parse(pendingAdd).id;
         const p = S.products.find(x => x.id === pid);
         if (p && p.avail && S.user) add(pid);
       }
