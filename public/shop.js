@@ -212,7 +212,7 @@ function renderMenu() {
   const list = S.products.filter(p => catIds.has(p.catId) && (S.cat === 'All' || p.cat === S.cat));
   $('#prodGrid').innerHTML = list.length ? list.map((p, idx) => {
     const img = p.img
-      ? '<img src="' + p.img + '" width="400" height="300" loading="' + (idx < 6 ? 'eager' : 'lazy') + '" decoding="async" fetchpriority="' + (idx < 3 ? 'high' : 'low') + '" onerror="this.outerHTML=\'<div class=\\\'ph\\\'>' + p.emoji + '</div>\'" class="pc-img">'
+      ? '<img src="' + p.img + '" width="400" height="300" loading="eager" decoding="async" onerror="this.outerHTML=\'<div class=\\\'ph\\\'>' + p.emoji + '</div>\'" class="pc-img">'
       : '<div class="ph">' + p.emoji + '</div>';
     const rv = p.reviews
       ? '<div class="rvc" onclick="openReviews(' + p.id + ')">' + starHtml(p) + '<span class="rc">' + p.rating + ' · ' + p.reviews + ' review' + (p.reviews > 1 ? 's' : '') + '</span></div>'
