@@ -51,7 +51,6 @@ async function init() {
   try {
     const d = await api('/api/init');
     S.settings = d.settings; S.categories = d.categories; S.products = d.products; S.user = d.me;
-    if (!S.user) { S.cart = []; saveCart(); }
     if (S.settings.toggles.maint) { showMaintenance(); return; }
     I18N.setAvailableFromToggles(S.settings.toggles);
     renderSettings(); applyImages(d.images);
@@ -390,11 +389,8 @@ async function buyGift() {
 async function openAcc() {
   const u = S.user; if (!u) return;
   const joined = u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-  let gcHtml = '<div class="accRow"><span>…</span><b>—</b></div>', resHtml = '';
-  try { const gc = await api('/api/my-giftcards'); gcHtml = giftcardsHtml(gc.giftcards); } catch (e) {}
-  try { const rs = await api('/api/my-reservations'); resHtml = rs.reservations.length ? rs.reservations.map(x => '<div class="accRow"><span>' + String(x.res_date).slice(0, 10) + ' ' + x.res_time + '</span><b>' + x.guests + ' guests · ' + x.status + '</b></div>').join('') : '<div class="accRow"><span>' + T('acc_res_none') + '</span><b>—</b></div>'; } catch (e) {}
   const accIcon = '<div class="acc-ico-wrap"><svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
-  $('#accContent').innerHTML =
+  const baseHtml =
     '<div class="acc-header">' + accIcon +
     '<div><div class="mt">' + T('acc_title') + '</div>' +
     '<div class="ms">' + T('acc_profile') + ' ' + (S.settings.name || 'MOOD') + '</div></div></div>' +
@@ -404,7 +400,7 @@ async function openAcc() {
     (joined ? '<div class="accRow"><span>' + T('acc_member') + '</span><b>' + joined + '</b></div>' : '') +
     loyaltyHtml() +
     '<div class="ms">' + T('acc_gift_title') + ' <b class="acc-giftbtn" onclick="toggleGiftForm()">+ ' + T('acc_buy_gift') + '</b></div>' +
-    '<div id="gcList">' + gcHtml + '</div>' +
+    '<div id="gcList"><div class="accRow"><span>…</span><b>—</b></div></div>' +
     '<div class="gcform" id="gcBuyForm" style="display:none">' +
     '<label><span>' + T('acc_gift_amt') + '</span><input id="gcAmt" type="number" min="1" max="500" placeholder="10"></label>' +
     '<label><span>' + T('acc_gift_to') + '</span><input id="gcRec" placeholder="Aline"></label>' +
@@ -412,9 +408,14 @@ async function openAcc() {
     '<label><span>' + T('acc_gift_msg') + '</span><input id="gcMsgTxt" placeholder="Enjoy your coffee!"></label>' +
     '<p id="gcBuyMsg"></p>' +
     '<button class="auth-btn" id="gcBuyBtn" onclick="buyGift()">' + T('acc_gift_btn') + '</button></div>' +
-    '<div class="ms">' + T('acc_bookings') + '</div>' + resHtml +
+    '<div class="ms">' + T('acc_bookings') + '</div><div id="resList"><div class="accRow"><span>…</span><b>—</b></div></div>' +
     '<div class="accFoot"><button class="auth-btn" onclick="closeAcc();logout()">' + T('acc_logout') + '</button></div>';
+  $('#accContent').innerHTML = baseHtml;
   $('#accOvl').classList.add('open'); $('#accBox').classList.add('open');
+  Promise.all([
+    api('/api/my-giftcards').then(function(gc) { var el = $('#gcList'); if (el) el.innerHTML = giftcardsHtml(gc.giftcards); }).catch(function() {}),
+    api('/api/my-reservations').then(function(rs) { var el = $('#resList'); if (el) el.innerHTML = rs.reservations.length ? rs.reservations.map(function(x) { return '<div class="accRow"><span>' + String(x.res_date).slice(0, 10) + ' ' + x.res_time + '</span><b>' + x.guests + ' guests · ' + x.status + '</b></div>'; }).join('') : '<div class="accRow"><span>' + T('acc_res_none') + '</span><b>—</b></div>'; }).catch(function() {})
+  ]);
 }
 function closeAcc() { $('#accOvl').classList.remove('open'); $('#accBox').classList.remove('open'); }
 async function submitAuth(m) {
@@ -430,7 +431,7 @@ async function submitAuth(m) {
 function logout() {
   askConfirm(T('shop_logout_confirm'), () => {
     try { api('/api/logout', { method: 'POST', body: '{}' }); } catch (e) {}
-    S.user = null; S.cart = []; saveCart(); closeAcc(); renderNav(); go('menu'); toast(T('shop_logged_out'));
+    S.user = null; saveCart(); closeAcc(); renderNav(); go('menu'); toast(T('shop_logged_out'));
   });
 }
 
