@@ -665,7 +665,7 @@ function authVideoCard(x) {
     <div class="av-acts">
       <button class="a-btn" onclick="previewAuthVideo(this)">Preview</button>
       ${x.active ? '' : '<button class="a-btn gold" onclick="activateAuthVideo(' + x.id + ')">Activate</button>'}
-      <button class="a-btn red" onclick="delAuthVideo(' + x.id + ')">Delete</button>
+      <button class="a-btn red" onclick="delAuthVideo(${x.id})">Delete</button>
     </div>
   </div>`;
 }
