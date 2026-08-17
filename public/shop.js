@@ -51,6 +51,7 @@ async function init() {
   try {
     const d = await api('/api/init');
     S.settings = d.settings; S.categories = d.categories; S.products = d.products; S.user = d.me;
+    if (!S.user) { S.cart = []; saveCart(); }
     if (S.settings.toggles.maint) { showMaintenance(); return; }
     I18N.setAvailableFromToggles(S.settings.toggles);
     renderSettings(); applyImages(d.images);
@@ -60,7 +61,7 @@ async function init() {
         localStorage.removeItem('mood_add');
         const pid = JSON.parse(add).id;
         const p = S.products.find(x => x.id === pid);
-        if (p && p.avail) addToCart(pid);
+        if (p && p.avail && S.user) add(pid);
       }
     } catch (e) {}
   } catch (e) { toast('Could not reach server.'); }
