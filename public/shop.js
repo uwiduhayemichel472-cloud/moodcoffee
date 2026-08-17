@@ -570,14 +570,6 @@ async function placeOrder() {
     if (online && payment === 'card') card = await cardPayload();
   } catch (e) { showPayErr(e.message); btn.disabled = false; btn.textContent = online ? T('shop_placed') : T('shop_placed_cash'); return; }
   const momoPhone = online && (payment === 'mtn' || payment === 'airtel') && $('#pcMoMo') ? $('#pcMoMo').value.trim() : '';
-  if (online && (payment === 'mtn' || payment === 'airtel')) {
-    const raw = momoPhone.replace(/[^\d]/g, '');
-    const local = raw.startsWith('250') ? raw.slice(3) : raw.startsWith('0') ? raw : '0' + raw;
-    if (local.length < 9 || local.length > 10 || !/^0(7[2389]|8[0-9])\d{7}$/.test(local)) {
-      showPayErr(T('co_momo_invalid') || 'Enter a valid Rwanda mobile money number (e.g. 0788 123 456).');
-      btn.disabled = false; btn.textContent = T('shop_placed'); return;
-    }
-  }
   try {
     const j = await api('/api/orders', { method: 'POST', body: JSON.stringify({
       cart: S.cart, phone, address: addr, notes: $('#coNotes').value, payment, promo: S.promo ? S.promo.code : '',
