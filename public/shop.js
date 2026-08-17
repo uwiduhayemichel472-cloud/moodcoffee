@@ -152,7 +152,8 @@ function showMaintenance() { location.href = '/maintenance.html'; }
 
 function renderNav() {
   const a = $('#authBtns');
-  if (S.user) a.innerHTML = '<button class="nl" onclick="openAcc()" title="' + T('nav_account') + '">' + S.user.name.split(' ')[0] +
+  const userIcon = '<svg class="acc-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px;flex-shrink:0"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+  if (S.user) a.innerHTML = '<button class="nl acc-btn" onclick="openAcc()" title="' + T('nav_account') + '">' + userIcon + S.user.name.split(' ')[0] +
     '</button><button class="nl" onclick="logout()">' + T('nav_logout') + '</button>';
   else a.innerHTML = '<button class="nl" onclick="auth(\'login\')">' + T('nav_login') + '</button>' +
     (S.settings.toggles.reg !== false ? '<button class="nl" onclick="auth(\'signup\')">' + T('nav_signup') + '</button>' : '');
@@ -209,8 +210,10 @@ function renderMenu() {
   if (!S.service) { $('#prodGrid').innerHTML = '<div class="empty" style="grid-column:1/-1">' + T('shop_choose_service') + '</div>'; return; }
   const catIds = new Set(serviceCats().map(c => c.id));
   const list = S.products.filter(p => catIds.has(p.catId) && (S.cat === 'All' || p.cat === S.cat));
-  $('#prodGrid').innerHTML = list.length ? list.map(p => {
-    const img = p.img ? '<img src="' + p.img + '" onerror="this.outerHTML=\'<div class=\\\'ph\\\'>' + p.emoji + '</div>\'">' : '<div class="ph">' + p.emoji + '</div>';
+  $('#prodGrid').innerHTML = list.length ? list.map((p, idx) => {
+    const img = p.img
+      ? '<img src="' + p.img + '" width="400" height="300" loading="' + (idx < 6 ? 'eager' : 'lazy') + '" decoding="async" fetchpriority="' + (idx < 3 ? 'high' : 'low') + '" onerror="this.outerHTML=\'<div class=\\\'ph\\\'>' + p.emoji + '</div>\'" class="pc-img">'
+      : '<div class="ph">' + p.emoji + '</div>';
     const rv = p.reviews
       ? '<div class="rvc" onclick="openReviews(' + p.id + ')">' + starHtml(p) + '<span class="rc">' + p.rating + ' · ' + p.reviews + ' review' + (p.reviews > 1 ? 's' : '') + '</span></div>'
       : '<div class="rvc" onclick="openReviews(' + p.id + ')"><span class="rc" style="color:var(--gold)">Be the first to review</span></div>';
@@ -389,9 +392,11 @@ async function openAcc() {
   let gcHtml = '<div class="accRow"><span>…</span><b>—</b></div>', resHtml = '';
   try { const gc = await api('/api/my-giftcards'); gcHtml = giftcardsHtml(gc.giftcards); } catch (e) {}
   try { const rs = await api('/api/my-reservations'); resHtml = rs.reservations.length ? rs.reservations.map(x => '<div class="accRow"><span>' + String(x.res_date).slice(0, 10) + ' ' + x.res_time + '</span><b>' + x.guests + ' guests · ' + x.status + '</b></div>').join('') : '<div class="accRow"><span>' + T('acc_res_none') + '</span><b>—</b></div>'; } catch (e) {}
+  const accIcon = '<div class="acc-ico-wrap"><svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
   $('#accContent').innerHTML =
-    '<div class="mt">' + T('acc_title') + '</div>' +
-    '<div class="ms">' + T('acc_profile') + ' ' + (S.settings.name || 'MOOD') + '</div>' +
+    '<div class="acc-header">' + accIcon +
+    '<div><div class="mt">' + T('acc_title') + '</div>' +
+    '<div class="ms">' + T('acc_profile') + ' ' + (S.settings.name || 'MOOD') + '</div></div></div>' +
     '<div class="accRow"><span>' + T('acc_name') + '</span><b>' + u.name + '</b></div>' +
     '<div class="accRow"><span>' + T('acc_email') + '</span><b>' + u.email + '</b></div>' +
     '<div class="accRow"><span>' + T('acc_phone') + '</span><b>' + (u.phone || '—') + '</b></div>' +
