@@ -714,6 +714,7 @@ app.post('/api/pay/webhook', async (req, res) => {
   try {
     const body = req.body || {};
     const raw = Buffer.isBuffer(req.rawBody) ? req.rawBody.toString() : String(req.rawBody || '');
+    console.log('[Webhook] kind=' + body.kind + ' data_ref=' + (body.data && body.data.ref) + ' data_status=' + (body.data && body.data.status) + ' sig=' + String(req.headers['x-paypack-signature'] || '').slice(0, 20));
 
     // ── Paypack ──
     if (body.kind === 'transaction:processed' && body.data && body.data.ref) {
@@ -722,8 +723,11 @@ app.post('/api/pay/webhook', async (req, res) => {
         return res.json({ ok: true });
       const sig = String(req.headers['x-paypack-signature'] || '');
       const secret = cfg.gateway.paypack.webhookSecret;
-      if (secret && (!sig || !paypack.verifySignature(raw, sig)))
+      console.log('[Webhook Paypack] d.ref=' + d.ref + ' d.status=' + d.status + ' secret_set=' + !!secret + ' sig_set=' + !!sig);
+      if (secret && (!sig || !paypack.verifySignature(raw, sig))) {
+        console.log('[Webhook Paypack] SIGNATURE MISMATCH — rejecting');
         return res.status(401).json({ error: 'Invalid webhook signature.' });
+      }
       if (d.status === 'successful') {
         const rows = await q('SELECT ref FROM orders WHERE charge_id=?', [String(d.ref)]);
         if (rows.length) {
