@@ -17,9 +17,11 @@
     '.mood-auth-brand{position:absolute;left:24px;bottom:20px;z-index:5;font-family:\'Cormorant Garamond\',serif;font-weight:300;font-size:1.4rem;letter-spacing:.16em;color:#fdf6ee;text-transform:uppercase;text-shadow:0 2px 14px rgba(0,0,0,.5)}' +
     '.mood-auth-brand b{color:#e8c080;font-weight:300}' +
     '.mood-auth-tagline{position:absolute;left:24px;bottom:48px;z-index:5;font-family:\'Jost\',sans-serif;font-size:.58rem;letter-spacing:.3em;text-transform:uppercase;color:rgba(232,192,128,.8);text-shadow:0 1px 8px rgba(0,0,0,.5)}' +
-    '.mood-auth-words-below{position:relative;z-index:5;padding:20px 24px 14px;display:flex;flex-wrap:wrap;gap:10px;margin-top:auto;background:linear-gradient(180deg,transparent,rgba(26,10,0,.95) 30%)}' +
-    '.mword-pill{font-family:\'Cormorant Garamond\',serif;font-weight:300;font-size:.88rem;letter-spacing:.14em;text-transform:uppercase;color:#fdf6ee;padding:7px 16px;border-radius:20px;border:1px solid rgba(212,160,96,.3);background:rgba(26,10,0,.6);backdrop-filter:blur(4px);opacity:0;animation:mwordIn .6s ease-out forwards;animation-delay:var(--d,0s)}' +
-    '@keyframes mwordIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}' +
+    '.mood-auth-words-below{position:relative;z-index:5;overflow:hidden;margin-top:auto;background:linear-gradient(180deg,transparent,rgba(26,10,0,.95) 30%);padding:14px 0}' +
+    '.mword-track{display:flex;width:max-content;animation:mwordSlide 18s linear infinite}' +
+    '.mword-track:hover{animation-play-state:paused}' +
+    '@keyframes mwordSlide{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}' +
+    '.mword-pill{flex-shrink:0;font-family:\'Cormorant Garamond\',serif;font-weight:300;font-size:.88rem;letter-spacing:.14em;text-transform:uppercase;color:#fdf6ee;padding:7px 18px;border-radius:20px;border:1px solid rgba(212,160,96,.3);background:rgba(26,10,0,.6);backdrop-filter:blur(4px);white-space:nowrap;margin:0 6px}' +
     '.mood-auth-form{padding:36px 38px 30px;overflow-y:auto;background:linear-gradient(180deg,#2c1200,#1d0b00);display:flex;min-height:0}' +
     '.mood-auth-in{margin:auto 0;width:100%}' +
     '.mood-auth-form .mt{font-size:1.85rem;margin-bottom:4px}' +
@@ -33,8 +35,7 @@
       '.mood-auth-split{grid-template-columns:1fr;min-height:0;max-height:none}' +
       '.mood-auth-media{height:auto;min-height:0;max-height:220px}' +
       '.mood-auth-video{height:180px}' +
-      '.mood-auth-words-below{padding:12px 16px 10px;gap:6px}' +
-      '.mword-pill{font-size:.72rem;padding:5px 12px}' +
+      '.mword-pill{font-size:.72rem;padding:5px 14px}' +
       '.mood-auth-tagline{display:none}' +
       '.mood-auth-brand{left:16px;bottom:14px;font-size:1.1rem}' +
       '.mood-auth-form{padding:24px 22px;display:block;max-height:calc(92vh - 240px)}' +
@@ -47,13 +48,15 @@
   document.head.appendChild(st);
 
   window.moodAuthMediaHtml = function () {
+    var pills = [
+      'Freshly Roasted', 'Golden Hour', 'Artisan Bakes', 'Pure Coffee',
+      'Handcrafted', 'Morning Ritual', 'Bold Flavour', 'Slow Brewed'
+    ];
+    var html = pills.map(function(w){ return '<span class="mword-pill">'+w+'</span>'; }).join('');
     return '<div class="mood-auth-media">' +
       '<video class="mood-auth-video" muted loop playsinline preload="metadata"></video>' +
       '<div class="mood-auth-words-below">' +
-      '<span class="mword-pill" style="--d:.1s">Freshly Roasted</span>' +
-      '<span class="mword-pill" style="--d:.25s">Golden Hour</span>' +
-      '<span class="mword-pill" style="--d:.4s">Artisan Bakes</span>' +
-      '<span class="mword-pill" style="--d:.55s">Pure Coffee</span>' +
+      '<div class="mword-track">' + html + html + '</div>' +
       '</div>' +
       '<div class="mood-auth-tagline">Welcome to the ritual</div>' +
       '<div class="mood-auth-brand">MOOD<b>.</b></div>' +
