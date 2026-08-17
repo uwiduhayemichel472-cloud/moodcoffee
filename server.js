@@ -429,7 +429,9 @@ app.post('/api/orders', H.requireCustomer, async (req, res) => {
       try {
         if (gateMethod !== 'card' && paypack.configured()) {
           try {
+            console.log('[Paypack cashin] ref=' + ref + ' phone=' + payPhone + ' amount=' + payAmount);
             const t = await paypack.cashin({ amount: payAmount, phone: payPhone, idempotencyKey: ref });
+            console.log('[Paypack cashin OK] ref=' + ref + ' t.ref=' + t.ref + ' status=' + t.status + ' keys=' + Object.keys(t).join(','));
             result = { chargeId: t.ref, url: '', instruction: 'A payment prompt was sent to ' + payPhone + '. Check your phone and approve it to confirm the order.' };
             await logPayEvent({ order_ref: ref, gateway: 'paypack', gw_ref: t.ref, event: 'charge_created', status: t.status, amount: payAmount, client: payPhone });
           } catch (pkErr) {
@@ -682,6 +684,7 @@ app.get('/api/pay/status', async (req, res) => {
     if (o.status === 'Pending' && o.charge_id) {
       try {
         const tx = await gatewayVerify(o, o.charge_id);
+        console.log('[Pay poll] ref=' + ref + ' charge_id=' + o.charge_id + ' tx_status=' + (tx && tx.status) + ' tx_keys=' + (tx ? Object.keys(tx).join(',') : 'null'));
         if (tx && (tx.status === 'failed' || tx.status === 'voided')) {
           await logPayEvent({ order_ref: ref, gateway: o.payment === 'card' ? 'flutterwave' : 'paypack', gw_ref: String(o.charge_id), event: 'poll_failed', status: tx.status, amount: Number(tx.amount) || 0, client: o.phone });
           await q("UPDATE orders SET status='Cancelled' WHERE id=? AND status='Pending'", [o.id]);
