@@ -472,7 +472,7 @@ function renderCheckout() {
   renderLoyalty(); renderGiftField();
   renderTotals();
 }
-function pickPay(k) { S.pay = k; document.querySelectorAll('.po').forEach(p => p.classList.toggle('sel', p.getAttribute('data-k') === k)); renderPayField(); }
+function pickPay(k) { S.pay = k; showPayErr(''); document.querySelectorAll('.po').forEach(p => p.classList.toggle('sel', p.getAttribute('data-k') === k)); renderPayField(); }
 function renderPayField() {
   const m = S.pay, el = $('#payField');
   if (m === 'card') {
@@ -486,7 +486,7 @@ function renderPayField() {
   } else if (m === 'mtn' || m === 'airtel') {
     el.innerHTML =
       '<label><span>' + (m === 'mtn' ? 'MTN MoMo number' : 'Airtel Money number') + '</span>' +
-      '<input id="pcMoMo" inputmode="tel" placeholder="+250 7XX XXX XXX" value="' + esc($('#coPhone').value) + '"></label>' +
+      '<input id="pcMoMo" inputmode="tel" placeholder="+250 7XX XXX XXX" value="' + esc($('#coPhone').value) + '" oninput="showPayErr(\'\')"></label>' +
       '<p class="pmnote">' + T('co_momo_note') + '</p>';
   } else {
     el.innerHTML = '';
@@ -553,17 +553,31 @@ function renderTotals() {
   if (ptsVal) $('#sumPts').textContent = '-' + money(ptsVal);
   $('#sumTotal').textContent = money(Math.max(0, sub - disc - gift - ptsVal + fee));
 }
+function showPayErr(msg) {
+  var el = $('#payError'); if (!el) return;
+  if (!msg) { el.style.display = 'none'; return; }
+  el.textContent = msg; el.style.display = 'block';
+}
 async function placeOrder() {
   const phone = $('#coPhone').value.trim(), addr = $('#coAddr').value.trim();
   if (!phone || !addr) { toast(T('shop_enter_phone')); return; }
   const btn = $('#placeBtn'); btn.disabled = true; btn.textContent = T('shop_processing');
+  showPayErr('');
   const online = !!S.settings.onlinePay;
   const payment = online ? S.pay : 'cash';
   let card = null;
   try {
     if (online && payment === 'card') card = await cardPayload();
-  } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = online ? T('shop_placed') : T('shop_placed_cash'); return; }
+  } catch (e) { showPayErr(e.message); btn.disabled = false; btn.textContent = online ? T('shop_placed') : T('shop_placed_cash'); return; }
   const momoPhone = online && (payment === 'mtn' || payment === 'airtel') && $('#pcMoMo') ? $('#pcMoMo').value.trim() : '';
+  if (online && (payment === 'mtn' || payment === 'airtel')) {
+    const raw = momoPhone.replace(/[^\d]/g, '');
+    const local = raw.startsWith('250') ? raw.slice(3) : raw.startsWith('0') ? raw : '0' + raw;
+    if (local.length < 9 || local.length > 10 || !/^0(7[2389]|8[0-9])\d{7}$/.test(local)) {
+      showPayErr(T('co_momo_invalid') || 'Enter a valid Rwanda mobile money number (e.g. 0788 123 456).');
+      btn.disabled = false; btn.textContent = T('shop_placed'); return;
+    }
+  }
   try {
     const j = await api('/api/orders', { method: 'POST', body: JSON.stringify({
       cart: S.cart, phone, address: addr, notes: $('#coNotes').value, payment, promo: S.promo ? S.promo.code : '',
@@ -583,7 +597,7 @@ async function placeOrder() {
       (j.pointsEarned ? '<br>You earned <b style="color:var(--gold)">' + j.pointsEarned + ' loyalty points</b>!' : '') +
       (j.rewardsIssued && j.reward ? '<br>🎉 ' + esc(j.reward.title) + ' unlocked — code <b style="color:var(--gold)">' + esc(j.reward.code) + '</b>. Find it in your account.' : '');
     go('success');
-  } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = online ? T('shop_placed') : T('shop_placed_cash'); }
+  } catch (e) { showPayErr(e.message); btn.disabled = false; btn.textContent = online ? T('shop_placed') : T('shop_placed_cash'); }
 }
 
 // ─── Card encryption (Flutterwave v4 AesGcm) ───
@@ -654,6 +668,8 @@ function showFailed(msg) {
   go('failed');
 }
 function retryPayment() {
+  clearInterval(payPoll);
+  showPayErr('');
   go('checkout');
 }
 

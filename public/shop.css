@@ -84,6 +84,7 @@ label input:focus{border-color:var(--gold)}
 .srow.tot{font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:var(--gl);border:none;padding-top:14px}
 .buy-btn{width:100%;margin-top:18px;padding:15px;background:var(--gold);border:none;color:var(--esp);font-family:'Jost',sans-serif;font-size:.74rem;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;font-weight:500;border-radius:6px}
 .buy-btn:hover{background:var(--gl)}
+.pay-error{margin-top:12px;padding:12px 14px;background:rgba(220,60,60,.12);border:1px solid rgba(220,60,60,.35);border-radius:8px;color:#f5b0b0;font-size:.72rem;line-height:1.5}
 .note{font-size:.66rem;color:rgba(245,230,211,.3);text-align:center;margin-top:10px}
 .ok{text-align:center;padding:80px 0}
 .ok .cup{font-size:3.4rem;margin-bottom:16px}

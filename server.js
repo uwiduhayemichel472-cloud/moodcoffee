@@ -428,9 +428,29 @@ app.post('/api/orders', H.requireCustomer, async (req, res) => {
       let result;
       try {
         if (gateMethod !== 'card' && paypack.configured()) {
-          const t = await paypack.cashin({ amount: payAmount, phone: payPhone, idempotencyKey: ref });
-          result = { chargeId: t.ref, url: '', instruction: 'A payment prompt was sent to ' + payPhone + '. Check your phone and approve it to confirm the order.' };
-          await logPayEvent({ order_ref: ref, gateway: 'paypack', gw_ref: t.ref, event: 'charge_created', status: t.status, amount: payAmount, client: payPhone });
+          try {
+            const t = await paypack.cashin({ amount: payAmount, phone: payPhone, idempotencyKey: ref });
+            result = { chargeId: t.ref, url: '', instruction: 'A payment prompt was sent to ' + payPhone + '. Check your phone and approve it to confirm the order.' };
+            await logPayEvent({ order_ref: ref, gateway: 'paypack', gw_ref: t.ref, event: 'charge_created', status: t.status, amount: payAmount, client: payPhone });
+          } catch (pkErr) {
+            const pkMsg = String(pkErr.message || '').toLowerCase();
+            if (pkMsg.includes('not found') || pkMsg.includes('testing mode') || pkMsg.includes('number not')) {
+              return res.status(400).json({ error: 'This phone number is not registered for Paypack testing. In development mode, only approved test numbers work. Switch to production mode in your Paypack dashboard, or ask the admin to add this number.' });
+            }
+            if (pkMsg.includes('insufficient')) {
+              return res.status(400).json({ error: 'Insufficient balance on the merchant account. Please try again later or use a different payment method.' });
+            }
+            if (pay.configured()) {
+              console.error('Paypack failed (' + pkErr.message + '), falling back to Flutterwave');
+              result = await pay.createPaymentLink({
+                amount: payAmount, currency, tx_ref: ref,
+                customer: { email: req.user.email, name: req.user.name, phone: payPhone, method: gateMethod, card: req.body.card },
+                description: items.map(i => i.name + ' ×' + i.qty).join(', ').slice(0, 180)
+              });
+            } else {
+              throw pkErr;
+            }
+          }
         } else {
           result = await pay.createPaymentLink({
             amount: payAmount, currency,
