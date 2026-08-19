@@ -15,7 +15,7 @@ function buildTransport(smtp) {
   if (!host || !user) return null;
   const port = Number(smtp.port) || (smtp.secure === false ? 587 : 465);
   const secure = smtp.secure === undefined ? port === 465 : !!smtp.secure;
-  return nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
+  return nodemailer.createTransport({ host, port, secure, auth: { user, pass }, connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 15000 });
 }
 
 // smtp = { host, port, secure, user, pass, from } — merges env defaults.
@@ -23,6 +23,13 @@ function merged(smtp) {
   const c = cfg.smtp || {};
   const m = Object.assign({}, c, smtp || {});
   return { host: m.host, port: m.port, secure: m.secure, user: m.user, pass: m.pass, from: m.from };
+}
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+  ]);
 }
 
 /**
@@ -41,12 +48,12 @@ async function sendMail(smtp, opts) {
     const from = String(opts.from || s.from || s.user || '').trim();
     const to = String(opts.to || '').trim();
     if (!from || !to) return false;
-    await transportCache.sendMail({
+    await withTimeout(transportCache.sendMail({
       from, to,
       subject: String(opts.subject || '').slice(0, 150),
       text: String(opts.text || ''),
       html: String(opts.html || '')
-    });
+    }), 20000);
     return true;
   } catch (e) {
     console.error('mailer: send failed —', e.message);
