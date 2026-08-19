@@ -174,9 +174,9 @@ async function loadOverview() {
       ${s.payFlags.map(f => `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0ece8;font-size:.82rem"><span><b>${esc(f.order_ref || '—')}</b> · ${esc(f.gateway)} ${esc(f.event)} · ${esc(f.status)}${Number(f.amount) ? ' · ' + money(f.amount) : ''}${f.client ? ' · ' + esc(f.client) : ''}<div class="d" style="color:#888;font-size:.75rem">${dt(f.created_at)} · gw ref ${esc(f.gw_ref || '')}</div></span><button class="a-btn" style="color:#c0392b;flex:0 0 auto" onclick="delFlag(${f.id})" title="Remove this flag">✕ Remove</button></div>`).join('')}
       <p style="color:#c0392b;font-size:.78rem;margin:8px 0 0">Check the Paypack dashboard for these refs — if the customer was charged but Paypack shows failed, refund them.</p>
     </div></div>` : ''}
-  <div class="card2"><div class="hd"><b>Recent orders</b></div><div class="bd">
-    <table><tr><th>Ref</th><th>Customer</th><th>Total</th><th>Payment</th><th>Status</th><th>When</th></tr>
-    ${s.recentOrders.map(o => `<tr><td><b>${esc(o.ref)}</b></td><td>${esc(o.customer)}</td><td>${money(o.total)}</td><td>${esc(o.payment)}</td><td><span class="bdg ${esc(o.status)}">${esc(o.status)}</span></td><td>${dt(o.created_at)}</td></tr>`).join('')}
+  <div class="card2"><div class="hd"><b>Recent orders</b></div><div class="bd table-wrap">
+    <table><tr><th>Ref</th><th>Customer</th><th>Total</th><th class="hide-sm">Payment</th><th>Status</th><th class="hide-sm">When</th></tr>
+    ${s.recentOrders.map(o => `<tr><td><b>${esc(o.ref)}</b></td><td>${esc(o.customer)}</td><td>${money(o.total)}</td><td class="hide-sm">${esc(o.payment)}</td><td><span class="bdg ${esc(o.status)}">${esc(o.status)}</span></td><td class="hide-sm">${dt(o.created_at)}</td></tr>`).join('')}
   </table></div></div>`;
 }
 
@@ -200,8 +200,8 @@ async function loadProducts() {
     <input id="pSearch" placeholder="Search products…" oninput="fp(this.value)">
     <button class="a-btn" onclick="openProd()">+ Add product</button>
   </div>
-  <div class="card2"><div class="bd" style="padding:0">
-    <table id="pTable"><tr><th></th><th>Name</th><th>Category</th><th>Price</th><th>Available</th><th>Featured</th><th></th></tr>
+  <div class="card2"><div class="bd table-wrap" style="padding:0">
+    <table id="pTable"><tr><th></th><th>Name</th><th>Category</th><th>Price</th><th class="hide-sm">Available</th><th class="hide-sm">Featured</th><th></th></tr>
     ${prods.map(p => prodRow(p)).join('')}
     </table></div></div>`;
 }
@@ -209,8 +209,8 @@ function prodRow(p) {
   return `<tr data-name="${esc(p.name.toLowerCase())}" data-cat="${esc((p.cat || '').toLowerCase())}">
     <td>${p.img ? `<img class="mini" src="${esc(p.img)}">` : `<span class="mini">${esc(p.emoji || '☕')}</span>`}</td>
     <td><b>${esc(p.name)}</b></td><td>${esc(p.cat)}</td><td>${money(p.price)}</td>
-    <td><span class="bdg ${p.avail ? 'on' : 'off'}" style="cursor:pointer" onclick="tog(${p.id},'available',${p.avail ? 0 : 1},this)">${p.avail ? 'Live' : 'Hidden'}</span></td>
-    <td><span class="bdg ${p.feat ? 'on' : 'off'}" style="cursor:pointer" onclick="tog(${p.id},'featured',${p.feat ? 0 : 1},this)">${p.feat ? 'Featured' : '—'}</span></td>
+    <td class="hide-sm"><span class="bdg ${p.avail ? 'on' : 'off'}" style="cursor:pointer" onclick="tog(${p.id},'available',${p.avail ? 0 : 1},this)">${p.avail ? 'Live' : 'Hidden'}</span></td>
+    <td class="hide-sm"><span class="bdg ${p.feat ? 'on' : 'off'}" style="cursor:pointer" onclick="tog(${p.id},'featured',${p.feat ? 0 : 1},this)">${p.feat ? 'Featured' : '—'}</span></td>
     <td><button class="a-btn" onclick="openProd(${p.id})">Edit</button> <button class="a-btn red" onclick="delProd(${p.id},'${esc(p.name)}')">Delete</button></td>
   </tr>`;
 }
@@ -292,9 +292,9 @@ async function loadCategories() {
   const c = await api('/api/admin/categories');
   return `
   <div class="toolbar"><button class="a-btn" onclick="openCat()">+ Add category</button></div>
-  <div class="card2"><div class="bd" style="padding:0">
-    <table><tr><th></th><th>Name</th><th>Service</th><th>Products</th><th></th></tr>
-    ${c.map(x => `<tr><td>${x.image ? `<img class="mini" src="${esc(x.image)}">` : '<span class="mini">📂</span>'}</td><td><b>${esc(x.name)}</b></td><td><span class="role-badge ${x.service === 'bakery' ? 'staff' : 'super'}">${x.service === 'bakery' ? 'Bakery' : 'Coffee'}</span></td><td>${x.count}</td><td><button class="a-btn red" onclick="delCat(${x.id},'${esc(x.name)}')">Delete</button></td></tr>`).join('')}
+  <div class="card2"><div class="bd table-wrap" style="padding:0">
+    <table><tr><th></th><th>Name</th><th>Service</th><th class="hide-sm">Products</th><th></th></tr>
+    ${c.map(x => `<tr><td>${x.image ? `<img class="mini" src="${esc(x.image)}">` : '<span class="mini">📂</span>'}</td><td><b>${esc(x.name)}</b></td><td><span class="role-badge ${x.service === 'bakery' ? 'staff' : 'super'}">${x.service === 'bakery' ? 'Bakery' : 'Coffee'}</span></td><td class="hide-sm">${x.count}</td><td><button class="a-btn red" onclick="delCat(${x.id},'${esc(x.name)}')">Delete</button></td></tr>`).join('')}
     </table></div></div>`;
 }
 let promoMode = false;
@@ -348,8 +348,8 @@ async function loadOrders() {
       <option value="">All statuses</option><option>Preparing</option><option>Pending</option><option>Delivered</option><option>Cancelled</option>
     </select>
   </div>
-  <div class="card2"><div class="bd" style="padding:0">
-    <table id="oTable"><tr><th>Ref</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th>When</th></tr>
+  <div class="card2"><div class="bd table-wrap" style="padding:0">
+    <table id="oTable"><tr><th>Ref</th><th>Customer</th><th class="hide-sm">Items</th><th>Total</th><th class="hide-sm">Payment</th><th>Status</th><th class="hide-sm">When</th></tr>
     ${o.map(ordRow).join('')}
     </table></div></div>`;
 }
@@ -358,11 +358,11 @@ function ordRow(o) {
   return `<tr data-ref="${esc((o.ref || '').toLowerCase())}" data-cust="${esc((o.user || '').toLowerCase())}" data-ph="${esc((o.phone || '').toLowerCase())}" data-st="${esc(o.status)}">
     <td><b>${esc(o.ref)}</b><br><small style="color:#7a5c44">${esc(o.address || '')}</small></td>
     <td>${esc(o.user)}<br><small style="color:#7a5c44">${esc(o.phone || '')}</small></td>
-    <td style="font-size:.76rem">${its}</td>
+    <td class="hide-sm" style="font-size:.76rem">${its}</td>
     <td>${money(o.total)}${o.discount ? `<br><small style="color:#2d6a4f">−${money(o.discount)}</small>` : ''}</td>
-    <td>${esc(o.payment)}</td>
+    <td class="hide-sm">${esc(o.payment)}</td>
     <td><select style="width:130px;margin:0" onchange="setStatus(${o.id},this.value)">${['Preparing','Pending','Delivered','Cancelled'].map(s => `<option ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}</select></td>
-    <td>${dt(o.date)}</td>
+    <td class="hide-sm">${dt(o.date)}</td>
   </tr>`;
 }
 function ordIcon(i) {
@@ -392,9 +392,9 @@ async function loadCustomers() {
   const c = await api('/api/admin/customers');
   return `
   <div class="toolbar"><input id="cSearch" placeholder="Search customers…" oninput="fc(this.value)"></div>
-  <div class="card2"><div class="bd" style="padding:0">
-    <table id="cTable"><tr><th>Name</th><th>Email</th><th>Phone</th><th>Orders</th><th>Spent</th><th>Points</th><th>Joined</th><th></th></tr>
-    ${c.map(u => `<tr data-f="${esc((u.name + ' ' + u.email).toLowerCase())}"><td><b>${esc(u.name)}</b></td><td>${esc(u.email)}</td><td>${esc(u.phone || '—')}</td><td>${u.orders}</td><td>${money(u.spent)}</td><td><span class="bdg on">${u.points || 0} pts</span></td><td>${dt(u.created_at)}</td><td><button class="a-btn red" onclick="delCust(${u.id},'${esc(u.name)}')">Delete</button></td></tr>`).join('')}
+  <div class="card2"><div class="bd table-wrap" style="padding:0">
+    <table id="cTable"><tr><th>Name</th><th class="hide-sm">Email</th><th class="hide-sm">Phone</th><th>Orders</th><th class="hide-sm">Spent</th><th class="hide-sm">Points</th><th class="hide-sm">Joined</th><th></th></tr>
+    ${c.map(u => `<tr data-f="${esc((u.name + ' ' + u.email).toLowerCase())}"><td><b>${esc(u.name)}</b></td><td class="hide-sm">${esc(u.email)}</td><td class="hide-sm">${esc(u.phone || '—')}</td><td>${u.orders}</td><td class="hide-sm">${money(u.spent)}</td><td class="hide-sm"><span class="bdg on">${u.points || 0} pts</span></td><td class="hide-sm">${dt(u.created_at)}</td><td><button class="a-btn red" onclick="delCust(${u.id},'${esc(u.name)}')">Delete</button></td></tr>`).join('')}
     </table></div></div>`;
 }
 function fc(v) {
@@ -721,7 +721,7 @@ async function loadNotifs() {
   const n = await api('/api/admin/notifications');
   return `
   <div class="toolbar"><button class="a-btn red" onclick="clearNotifs()">Clear all</button></div>
-  ${n.map(x => `<div class="notif" style="opacity:${x.is_read ? .6 : 1}"><span class="ic" style="font-size:1rem">🔔</span><div class="n">${esc(x.message)}<div class="d">${dt(x.created_at)}</div></div><button class="a-btn" onclick="readNotif(${x.id},this)">Mark read</button></div>`).join('') || '<div class="card2"><div class="bd" style="color:#888">No notifications.</div></div>'}`;
+  ${n.map(x => `  <div class="notif" style="opacity:${x.is_read ? .6 : 1};flex-wrap:wrap"><span class="ic" style="font-size:1rem">🔔</span><div class="n" style="min-width:0;flex:1 1 200px">${esc(x.message)}<div class="d">${dt(x.created_at)}</div></div><button class="a-btn" onclick="readNotif(${x.id},this)">Mark read</button></div>`).join('') || '<div class="card2"><div class="bd" style="color:#888">No notifications.</div></div>'}`;
 }
 async function readNotif(id, el) { try { await api('/api/admin/notifications/' + id + '/read', { method: 'POST', body: '{}' }); el.closest('.notif').style.opacity = .6; } catch (e) {} }
 async function clearNotifs() {
@@ -808,15 +808,15 @@ async function loadReviews() {
   const r = await api('/api/admin/reviews');
   return `
   <div class="toolbar"><span style="font-size:.82rem;color:#7a5c44">Customer reviews appear on the menu automatically. Hide or delete any that break your rules.</span></div>
-  <div class="card2"><div class="bd" style="padding:0">
-    <table><tr><th>Product</th><th>Customer</th><th>Rating</th><th>Comment</th><th>Status</th><th>When</th><th></th></tr>
+  <div class="card2"><div class="bd table-wrap" style="padding:0">
+    <table><tr><th>Product</th><th class="hide-sm">Customer</th><th>Rating</th><th class="hide-sm">Comment</th><th>Status</th><th class="hide-sm">When</th><th></th></tr>
     ${r.map(x => `<tr>
       <td><b>${esc(x.product)}</b></td>
-      <td>${esc(x.customer_name)}</td>
+      <td class="hide-sm">${esc(x.customer_name)}</td>
       <td style="color:var(--gold);letter-spacing:2px">${'★'.repeat(x.rating)}${'☆'.repeat(5 - x.rating)}</td>
-      <td style="max-width:300px;font-size:.78rem">${esc(x.comment) || '<span style="color:#999">—</span>'}</td>
+      <td class="hide-sm" style="max-width:300px;font-size:.78rem">${esc(x.comment) || '<span style="color:#999">—</span>'}</td>
       <td><span class="bdg ${x.status ? 'on' : 'off'}" style="cursor:pointer" onclick="togRev(${x.id},${x.status ? 0 : 1},this)">${x.status ? 'Shown' : 'Hidden'}</span></td>
-      <td style="font-size:.74rem">${dt(x.created_at)}</td>
+      <td class="hide-sm" style="font-size:.74rem">${dt(x.created_at)}</td>
       <td><button class="a-btn red" onclick="delRev(${x.id})">Delete</button></td>
     </tr>`).join('') || '<tr><td colspan="7" style="color:#888;text-align:center;padding:30px">No reviews yet.</td></tr>'}
     </table></div></div>`;
@@ -837,12 +837,12 @@ async function loadReservations() {
   const r = await api('/api/admin/reservations');
   return `
   <div class="toolbar"><span style="font-size:.82rem;color:#7a5c44">Table bookings made from the website.</span></div>
-  <div class="card2"><div class="bd" style="padding:0">
-    <table><tr><th>When</th><th>Name</th><th>Phone</th><th>Guests</th><th>Notes</th><th>Status</th><th></th></tr>
+  <div class="card2"><div class="bd table-wrap" style="padding:0">
+    <table><tr><th>When</th><th>Name</th><th class="hide-sm">Phone</th><th>Guests</th><th class="hide-sm">Notes</th><th>Status</th><th></th></tr>
     ${r.map(x => `<tr>
       <td><b>${esc(String(x.res_date).slice(0, 10))}</b><br><small style="color:#7a5c44">${esc(x.res_time || '')}</small></td>
-      <td>${esc(x.name)}</td><td>${esc(x.phone)}</td><td>${x.guests}</td>
-      <td style="max-width:220px;font-size:.76rem">${esc(x.notes) || '<span style="color:#999">—</span>'}</td>
+      <td>${esc(x.name)}</td><td class="hide-sm">${esc(x.phone)}</td><td>${x.guests}</td>
+      <td class="hide-sm" style="max-width:220px;font-size:.76rem">${esc(x.notes) || '<span style="color:#999">—</span>'}</td>
       <td><select style="width:130px;margin:0" onchange="setRes(${x.id},this.value)">${['Pending','Confirmed','Done','Cancelled'].map(s => `<option ${s === x.status ? 'selected' : ''}>${s}</option>`).join('')}</select></td>
       <td><button class="a-btn red" onclick="delRes(${x.id})">Delete</button></td>
     </tr>`).join('') || '<tr><td colspan="7" style="color:#888;text-align:center;padding:30px">No reservations yet.</td></tr>'}
@@ -864,14 +864,14 @@ async function loadGiftcards() {
   const g = await api('/api/admin/giftcards');
   return `
   <div class="toolbar"><button class="a-btn" onclick="openGc()">+ Create gift card</button></div>
-  <div class="card2"><div class="bd" style="padding:0">
-    <table><tr><th>Code</th><th>Buyer</th><th>Value</th><th>Balance</th><th>Status</th><th>Created</th><th></th></tr>
+  <div class="card2"><div class="bd table-wrap" style="padding:0">
+    <table><tr><th>Code</th><th>Buyer</th><th>Value</th><th>Balance</th><th>Status</th><th class="hide-sm">Created</th><th></th></tr>
     ${g.map(x => `<tr>
       <td><b>${esc(x.code)}</b></td>
       <td>${esc(x.buyer_name)}<br><small style="color:#7a5c44">${esc(x.buyer_email || '')}</small></td>
       <td>${money(x.amount)}</td><td>${money(x.balance)}</td>
       <td><span class="bdg ${x.status ? 'on' : 'off'}" style="cursor:pointer" onclick="togGc(${x.id},${x.status ? 0 : 1},this)">${x.status ? 'Active' : 'Disabled'}</span></td>
-      <td style="font-size:.74rem">${dt(x.created_at)}</td>
+      <td class="hide-sm" style="font-size:.74rem">${dt(x.created_at)}</td>
       <td><button class="a-btn red" onclick="delGc(${x.id})">Delete</button></td>
     </tr>`).join('') || '<tr><td colspan="7" style="color:#888;text-align:center;padding:30px">No gift cards yet.</td></tr>'}
     </table></div></div>`;
@@ -911,14 +911,14 @@ async function loadPayouts() {
       <div class="fg"><label>Mobile money number *<input id="coPhone" placeholder="e.g. 0788123456"></label></div>
       <button class="gold" style="max-width:240px" onclick="doPayout()">Withdraw</button>
     </div></div>
-    <div class="card2"><div class="hd"><b>History</b></div><div class="bd" style="padding:0">
-      <table><tr><th>Ref</th><th>Number</th><th>Amount</th><th>Status</th><th>When</th><th></th></tr>
+    <div class="card2"><div class="hd"><b>History</b></div><div class="bd table-wrap" style="padding:0">
+      <table><tr><th>Ref</th><th>Number</th><th>Amount</th><th>Status</th><th class="hide-sm">When</th><th></th></tr>
       ${p.map(x => `<tr>
         <td><b>${esc(x.ref || '—')}</b></td>
         <td>${esc(x.phone || '—')}</td>
         <td>${money(x.amount)}</td>
         <td><span class="bdg ${x.status === 'successful' ? 'on' : (x.status === 'failed' ? 'off' : '')}">${esc(x.status || x.event)}</span></td>
-        <td style="font-size:.74rem">${dt(x.created_at)}</td>
+        <td class="hide-sm" style="font-size:.74rem">${dt(x.created_at)}</td>
         <td><button class="a-btn" onclick="checkPayout('${esc(x.ref || '')}',this)">Refresh</button></td>
       </tr>`).join('') || '<tr><td colspan="6" style="color:#888;text-align:center;padding:30px">No withdrawals yet.</td></tr>'}
       </table></div></div>
@@ -955,7 +955,7 @@ const METHOD_LBL = { mtn: 'MTN MoMo', airtel: 'Airtel Money', tigo: 'Tigo Cash',
 
 async function loadMoney() {
   return `
-  <div class="toolbar" style="flex-wrap:wrap;gap:8px">
+  <div class="toolbar money-tabs" style="flex-wrap:wrap;gap:8px">
     <button class="a-btn ${moneyTabActive === 'overview' ? 'gold' : ''}" onclick="moneyTab('overview')">Overview</button>
     <button class="a-btn ${moneyTabActive === 'record' ? 'gold' : ''}" onclick="moneyTab('record')">Record money in / out</button>
     <button class="a-btn ${moneyTabActive === 'ledger' ? 'gold' : ''}" onclick="moneyTab('ledger')">Ledger</button>
@@ -1034,17 +1034,17 @@ function moneyLedgerHtml(d) {
     <span style="font-size:.82rem;color:#7a5c44">Every money movement, newest first.</span>
     <button class="a-btn" onclick="location='/api/admin/wallet/export'">⬇ Export CSV</button>
   </div>
-  <div class="card2"><div class="bd" style="padding:0">
-    <table><tr><th>When</th><th>Type</th><th>Method</th><th>Amount</th><th>Note</th><th>Ref</th><th>Status</th><th>By</th><th></th></tr>
+  <div class="card2"><div class="bd table-wrap" style="padding:0">
+    <table><tr><th>When</th><th>Type</th><th class="hide-sm">Method</th><th>Amount</th><th class="hide-sm">Note</th><th class="hide-sm">Ref</th><th class="hide-sm">Status</th><th class="hide-sm">By</th><th></th></tr>
     ${d.list.map(w => `<tr>
       <td style="font-size:.74rem">${dt(w.created_at)}</td>
       <td><span class="bdg ${w.type === 'in' ? 'on' : 'off'}">${w.type === 'in' ? 'In' : 'Out'}</span></td>
-      <td>${esc(w.methodLabel || w.method)}</td>
+      <td class="hide-sm">${esc(w.methodLabel || w.method)}</td>
       <td><b style="color:${w.type === 'in' ? '#2e7d32' : '#c0392b'}">${w.type === 'in' ? '+' : '−'}${money(w.amount)}</b></td>
-      <td style="max-width:240px;font-size:.78rem">${esc(w.note) || '—'}</td>
-      <td style="font-size:.74rem">${esc(w.ref || '—')}</td>
-      <td>${st(w.status)}</td>
-      <td style="font-size:.74rem">${esc(w.recordedBy || 'auto')}</td>
+      <td class="hide-sm" style="max-width:240px;font-size:.78rem">${esc(w.note) || '—'}</td>
+      <td class="hide-sm" style="font-size:.74rem">${esc(w.ref || '—')}</td>
+      <td class="hide-sm">${st(w.status)}</td>
+      <td class="hide-sm" style="font-size:.74rem">${esc(w.recordedBy || 'auto')}</td>
       <td>${w.createdBy && w.createdBy === admin.id ? `<button class="a-btn red" onclick="delWallet(${w.id})">✕</button>` : ''}</td>
     </tr>`).join('') || '<tr><td colspan="9" style="color:#888;text-align:center;padding:30px">No ledger entries yet. Record money in/out or take a payment to get started.</td></tr>'}
     </table></div></div>`;
@@ -1084,16 +1084,16 @@ async function moneyPaypackHtml() {
     <div class="card2"><div class="hd"><b>Received (successful money-in)</b></div><div class="bd" style="font-size:1.5rem;color:#2e7d32">${money(r.received)}</div></div>
     <div class="card2"><div class="hd"><b>Sent (successful money-out)</b></div><div class="bd" style="font-size:1.5rem;color:#c0392b">${money(r.sent)}</div></div>
   </div>
-  <div class="card2"><div class="hd"><b>All transactions (live from Paypack)</b></div><div class="bd" style="padding:0">
-    <table><tr><th>Ref</th><th>Type</th><th>Number</th><th>Amount</th><th>Provider</th><th>Status</th><th>Created</th></tr>
+  <div class="card2"><div class="hd"><b>All transactions (live from Paypack)</b></div><div class="bd table-wrap" style="padding:0">
+    <table><tr><th>Ref</th><th>Type</th><th class="hide-sm">Number</th><th>Amount</th><th class="hide-sm">Provider</th><th>Status</th><th class="hide-sm">Created</th></tr>
     ${list.map(t => `<tr>
       <td><b>${esc(t.ref || '—')}</b></td>
       <td>${t.kind === 'CASHIN' ? 'Money in' : (t.kind === 'CASHOUT' ? 'Money out' : esc(t.kind || '—'))}</td>
-      <td>${esc(t.client || '—')}</td>
+      <td class="hide-sm">${esc(t.client || '—')}</td>
       <td>${money(t.amount)}</td>
-      <td>${esc(String(t.provider || '—').toUpperCase())}</td>
+      <td class="hide-sm">${esc(String(t.provider || '—').toUpperCase())}</td>
       <td>${st(t.status)}</td>
-      <td style="font-size:.74rem">${dt(t.created_at)}</td>
+      <td class="hide-sm" style="font-size:.74rem">${dt(t.created_at)}</td>
     </tr>`).join('') || '<tr><td colspan="7" style="color:#888;text-align:center;padding:30px">No transactions yet.</td></tr>'}
     </table></div></div>`;
 }
@@ -1157,16 +1157,16 @@ async function loadAdmins() {
   const a = await api('/api/admin/admins');
   return `
   <div class="toolbar"><button class="a-btn" onclick="openAdmin()">+ Add admin</button></div>
-  <div class="card2"><div class="bd" style="padding:0">
-    <table><tr><th>Admin</th><th>Role</th><th>Permissions</th><th>Status</th><th>Last login</th><th></th></tr>
+  <div class="card2"><div class="bd table-wrap" style="padding:0">
+    <table><tr><th>Admin</th><th>Role</th><th class="hide-sm">Permissions</th><th>Status</th><th class="hide-sm">Last login</th><th></th></tr>
     ${a.map(adm => {
       const isMe = adm.id === admin.id;
       return `<tr>
         <td><b>${esc(adm.name)}</b>${isMe ? ' <small style="color:#c8956c">(you)</small>' : ''}<br><small style="color:#7a5c44">${esc(adm.email)}</small></td>
         <td><span class="role-badge ${adm.role === 'superadmin' ? 'super' : 'staff'}">${adm.role === 'superadmin' ? 'Super Admin' : 'Staff'}</span></td>
-        <td style="max-width:260px">${adm.role === 'superadmin' ? '<span class="chip">All permissions</span>' : (adm.perms.length ? adm.perms.map(p => `<span class="chip">${esc(permLabel(p))}</span>`).join('') : '<span style="color:#888">None</span>')}</td>
+        <td class="hide-sm" style="max-width:260px">${adm.role === 'superadmin' ? '<span class="chip">All permissions</span>' : (adm.perms.length ? adm.perms.map(p => `<span class="chip">${esc(permLabel(p))}</span>`).join('') : '<span style="color:#888">None</span>')}</td>
         <td><span class="bdg ${adm.status ? 'on' : 'off'}">${adm.status ? 'Active' : 'Disabled'}</span></td>
-        <td style="font-size:.76rem">${adm.last_login ? dt(adm.last_login) : '—'}</td>
+        <td class="hide-sm" style="font-size:.76rem">${adm.last_login ? dt(adm.last_login) : '—'}</td>
         <td>
           <button class="a-btn" onclick="openAdmin(${adm.id})">Edit</button>
           ${isMe ? '' : `<button class="a-btn" onclick="toggleAdmin(${adm.id},${adm.status ? 0 : 1},'${esc(adm.name)}')">${adm.status ? 'Disable' : 'Enable'}</button>`}
@@ -1233,12 +1233,29 @@ function gSearch(v) {
   switchPanel('orders');
   setTimeout(() => { if ($('oSearch')) { $('oSearch').value = v; fo(); } }, 50);
 }
+function toggleSearch() {
+  const inp = $('gSearch');
+  const tog = $('searchToggle');
+  if (inp.classList.contains('mobile-show')) {
+    inp.classList.remove('mobile-show');
+    tog.classList.remove('active');
+  } else {
+    inp.classList.add('mobile-show');
+    tog.classList.add('active');
+    inp.focus();
+  }
+}
 
 /* ---------------- Modal helpers ---------------- */
 document.addEventListener('click', e => {
   if (e.target.classList && e.target.classList.contains('ovl')) {
     ['prodOvl', 'catOvl', 'cfOvl', 'admOvl', 'gcOvl'].forEach(o => $('' + o).classList.remove('open'));
     ['prodModal', 'catModal', 'cfModal', 'admModal', 'gcModal'].forEach(m => $('' + m).classList.remove('open'));
+  }
+  /* Close mobile search when tapping outside */
+  if ($('gSearch') && !$('gSearch').contains(e.target) && !$('searchToggle').contains(e.target)) {
+    $('gSearch').classList.remove('mobile-show');
+    if ($('searchToggle')) $('searchToggle').classList.remove('active');
   }
 });
 

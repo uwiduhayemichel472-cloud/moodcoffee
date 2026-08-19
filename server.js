@@ -264,6 +264,7 @@ app.post('/api/newsletter', async (req, res) => {
     let mailOk = false;
     if (shopEmail) {
       mailOk = await mailer.sendMail(st.smtp, {
+        from: String(st.smtp.from || st.smtp.user || '').trim(),
         to: shopEmail,
         subject: '🔔 New newsletter signup — ' + (name.trim() || email.toLowerCase()),
         text: 'A new person just joined the "Stay in the Loop" list:\n\n' +
@@ -286,6 +287,7 @@ app.post('/api/newsletter', async (req, res) => {
     let welcomeOk = false;
     if (email) {
       welcomeOk = await mailer.sendMail(st.smtp, {
+        from: String(st.smtp.from || st.smtp.user || '').trim(),
         to: email.toLowerCase(),
         subject: 'Welcome to MOOD ☕ — your first sip is on us',
         text: 'Hello ' + (name.trim() || 'coffee friend') + ',\n\n' +
@@ -629,6 +631,7 @@ async function confirmPaidOrder(ref, txId, maxTries = 1) {
       const cust = await q('SELECT email,name FROM customers WHERE id=?', [o.user_id]);
       if (cust[0] && cust[0].email)
         mailer.sendMail(st.smtp, {
+          from: String(st.smtp.from || st.smtp.user || '').trim(),
           to: cust[0].email,
           subject: 'Order ' + ref + ' confirmed — MOOD Coffee Shop & Bakery',
           text: 'Hi ' + (cust[0].name || '') + ',\n\n' +
@@ -886,6 +889,7 @@ app.post('/api/giftcards', H.requireCustomer, async (req, res) => {
       const cur = st.currency || 'USD';
       const val = (cur === 'RWF' ? 'RWF ' : '$') + (cur === 'RWF' ? Math.round(amount) : amount.toFixed(2));
       emailed = await mailer.sendMail(st.smtp, {
+        from: String(st.smtp.from || st.smtp.user || '').trim(),
         to,
         subject: '🎁 A MOOD gift card for you!',
         text: (recipientName ? 'Hi ' + recipientName + ',\n\n' : '') +

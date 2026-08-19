@@ -57,6 +57,7 @@
       <button class="burger" id="burger" onclick="adminNav()" aria-label="Menu"><span></span><span></span><span></span></button>
       <h1 id="title">Dashboard</h1>
       <div class="r">
+        <span class="search-toggle" id="searchToggle" onclick="toggleSearch()" aria-label="Search">🔍</span>
         <input id="gSearch" placeholder="Search products, orders…" oninput="gSearch(this.value)">
         <span class="bell" onclick="switchPanel('notifications')">🔔<i id="bellDot"></i></span>
       </div>
