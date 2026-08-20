@@ -198,7 +198,7 @@ label input:focus{border-color:var(--gold)}
 .err{color:#e07070;font-size:.76rem;margin-top:10px;display:none}
 .svc-ovl{position:fixed;inset:0;background:rgba(5,2,0,.88);z-index:410;display:none}
 .svc-ovl.open{display:block}
-.svc-pick{position:fixed;inset:0;z-index:411;display:none;flex-direction:column;align-items:center;justify-content:center;gap:34px;text-align:center;padding:44px 28px;overflow-y:auto;background-color:#2c1200;background-image:radial-gradient(1200px 700px at 50% 0%,rgba(212,160,96,.16),transparent 60%),linear-gradient(175deg,#2c1200,#1a0a00 55%,#120600);-webkit-overflow-scrolling:touch}
+.svc-pick{position:fixed;inset:0;z-index:411;display:none;flex-direction:column;align-items:center;justify-content:safe center;gap:34px;text-align:center;padding:44px 28px;overflow-y:auto;background-color:#2c1200;background-image:radial-gradient(1200px 700px at 50% 0%,rgba(212,160,96,.16),transparent 60%),linear-gradient(175deg,#2c1200,#1a0a00 55%,#120600);-webkit-overflow-scrolling:touch}
 .svc-pick.open{display:flex;animation:svcpop .4s both}
 @keyframes svcpop{from{opacity:0;transform:scale(1.02)}to{opacity:1;transform:scale(1)}}
 .svc-lbl{font-size:.66rem;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);margin-bottom:14px}
