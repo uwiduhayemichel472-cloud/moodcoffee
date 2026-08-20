@@ -1005,6 +1005,11 @@ async function boot() {
   } catch (e) {
     console.error('Startup migration failed (continuing): ' + e.message);
   }
+  try {
+    await require('./seed-products.js').seedProducts();
+  } catch (e) {
+    console.error('Product catalog seeding failed (continuing): ' + e.message);
+  }
   setInterval(H.purgeExpired, 60 * 60 * 1000);
   app.listen(cfg.port, () => {
     console.log('MOOD Coffee Shop & Bakery running:');

@@ -1,10 +1,11 @@
-// Seeds the full 40-product demo catalog (20 coffee + 20 bakery) into an
-// EXISTING database WITHOUT touching orders, customers or admin changes.
+// Seeds the full 40-product demo catalog (20 coffee + 20 bakery).
+// Runs automatically on every server boot (see server.js boot()) so fresh
+// databases AND the live/production site get the complete catalog, and can
+// also be run manually:  node seed-products.js
 // Safe to run any number of times:
 //   · new products are inserted once (matched by name)
 //   · existing products that still point at old Unsplash demo photos get a
 //     free image refresh (prices/descriptions set by the admin are kept)
-// Run: node seed-products.js   (start MySQL/XAMPP first)
 const mysql = require('mysql2/promise');
 const cfg = require('./config.js');
 
@@ -59,40 +60,48 @@ const ITEMS = [
 // Demo promo video for Login / Sign-up (admin can upload/activate another any time).
 const DEMO_VIDEO = { filename: 'Coffee pour — promo', url: 'https://assets.mixkit.co/videos/43941/43941-720.mp4' };
 
-async function main() {
+async function seedProducts() {
   const conn = await mysql.createConnection({
     host: cfg.db.host, port: cfg.db.port, user: cfg.db.user,
     password: cfg.db.password, database: cfg.db.database, ssl: cfg.db.ssl
   });
-  let added = 0, refreshed = 0;
-  for (const it of ITEMS) {
-    const img = U(it.img);
-    const [rows] = await conn.query('SELECT id,image FROM products WHERE name=? LIMIT 1', [it.name]);
-    if (rows.length) {
-      const cur = String(rows[0].image || '');
-      if (cur.includes('unsplash') && cur !== img) {
-        await conn.query('UPDATE products SET image=?, available=1 WHERE id=?', [img, rows[0].id]);
-        refreshed++;
+  try {
+    let added = 0, refreshed = 0;
+    for (const it of ITEMS) {
+      const img = U(it.img);
+      const [rows] = await conn.query('SELECT id,image FROM products WHERE name=? LIMIT 1', [it.name]);
+      if (rows.length) {
+        const cur = String(rows[0].image || '');
+        if (cur.includes('unsplash') && cur !== img) {
+          await conn.query('UPDATE products SET image=?, available=1 WHERE id=?', [img, rows[0].id]);
+          refreshed++;
+        }
+        continue;
       }
-      continue;
+      await conn.query(
+        'INSERT INTO products (cat_id,name,description,price,emoji,image,available,featured) VALUES (?,?,?,?,?,?,1,?)',
+        [it.cat, it.name, it.desc, it.price, it.emoji, img, it.feat ? 1 : 0]
+      );
+      added++;
     }
-    await conn.query(
-      'INSERT INTO products (cat_id,name,description,price,emoji,image,available,featured) VALUES (?,?,?,?,?,?,1,?)',
-      [it.cat, it.name, it.desc, it.price, it.emoji, img, it.feat ? 1 : 0]
-    );
-    added++;
+    const [vids] = await conn.query('SELECT COUNT(*) n FROM auth_videos');
+    if (vids[0].n === 0) {
+      await conn.query('INSERT INTO auth_videos (filename,url,active) VALUES (?,?,1)', [DEMO_VIDEO.filename, DEMO_VIDEO.url]);
+      console.log('auth_videos: activated the demo promo video');
+    }
+    if (added || refreshed) console.log('seed-products: ' + added + ' added, ' + refreshed + ' images refreshed.');
+    return { added, refreshed };
+  } finally {
+    await conn.end();
   }
-  const [vids] = await conn.query('SELECT COUNT(*) n FROM auth_videos');
-  if (vids[0].n === 0) {
-    await conn.query('INSERT INTO auth_videos (filename,url,active) VALUES (?,?,1)', [DEMO_VIDEO.filename, DEMO_VIDEO.url]);
-    console.log('auth_videos: activated the demo promo video');
-  }
-  console.log('seed-products: ' + added + ' added, ' + refreshed + ' images refreshed.');
-  await conn.end();
 }
 
-main().catch(e => {
-  console.error('Seed failed: ' + e.message);
-  console.error('Is MySQL running? (Start it in XAMPP Control Panel)');
-  process.exit(1);
-});
+module.exports = { seedProducts };
+
+if (require.main === module) {
+  seedProducts().catch(e => {
+    console.error('Seed failed: ' + e.message);
+    console.error('Is MySQL running? (Start it in XAMPP Control Panel)');
+    process.exit(1);
+  });
+}
