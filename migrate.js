@@ -15,6 +15,16 @@ async function addCol(conn, table, def) {
   await conn.query(`ALTER TABLE ${table} ADD COLUMN ${def}`);
   console.log(`  + ${table}.${name}`);
 }
+// Upgrades a TEXT column to MEDIUMTEXT (base64 image uploads are longer than
+// the 65,535-byte TEXT limit — MySQL rejects them with "Data Too Long").
+async function widenCol(conn, table, col) {
+  const [rows] = await conn.query(
+    'SELECT DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME=? AND COLUMN_NAME=?',
+    [cfg.db.database, table, col]);
+  if (!rows.length || rows[0].DATA_TYPE !== 'text') return;
+  await conn.query(`ALTER TABLE ${table} MODIFY ${col} MEDIUMTEXT NULL`);
+  console.log(`  ~ ${table}.${col} — TEXT → MEDIUMTEXT`);
+}
 
 async function main() {
   const conn = await mysql.createConnection({
@@ -140,6 +150,11 @@ async function main() {
   await addCol(conn, 'sessions', "ip VARCHAR(45) DEFAULT ''");
   await addCol(conn, 'sessions', "ua VARCHAR(255) DEFAULT ''");
   await addCol(conn, 'payment_events', "client VARCHAR(30) DEFAULT NULL");
+
+  console.log('Widening image columns for uploaded (base64) images…');
+  await widenCol(conn, 'products', 'image');
+  await widenCol(conn, 'categories', 'image');
+  await widenCol(conn, 'banners', 'url');
 
   // Ensure the loyalty toggle exists in the existing settings JSON (default ON)
   const [stRows] = await conn.query('SELECT toggles FROM settings WHERE id=1');
