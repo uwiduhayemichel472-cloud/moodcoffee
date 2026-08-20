@@ -257,15 +257,15 @@ function upImg(e) {
   rd.onload = () => {
     const img = new Image();
     img.onload = () => {
-      let w = img.width, h = img.height;
-      const MAX = 800;
-      if (Math.max(w, h) > MAX) {
-        const s = MAX / Math.max(w, h);
-        w = Math.round(w * s); h = Math.round(h * s);
-      }
+      // Center-crop to the product card's exact 3:2 stage so every upload
+      // fills edge-to-edge (same shape as the catalog's Unsplash crops).
+      const W = 800, H = Math.round(800 / 1.5);
+      const s = Math.max(W / img.width, H / img.height);
+      const sw = W / s, sh = H / s;
+      const sx = (img.width - sw) / 2, sy = (img.height - sh) / 2;
       const cv = document.createElement('canvas');
-      cv.width = w; cv.height = h;
-      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      cv.width = W; cv.height = H;
+      cv.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
       $('pImg').value = cv.toDataURL('image/jpeg', 0.72);
       toast('Image ready');
     };
