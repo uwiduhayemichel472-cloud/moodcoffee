@@ -217,7 +217,7 @@ function renderMenu() {
     const rv = p.reviews
       ? '<div class="rvc" onclick="openReviews(' + p.id + ')">' + starHtml(p) + '<span class="rc">' + p.rating + ' · ' + p.reviews + ' review' + (p.reviews > 1 ? 's' : '') + '</span></div>'
       : '<div class="rvc" onclick="openReviews(' + p.id + ')"><span class="rc" style="color:var(--gold)">Be the first to review</span></div>';
-    return '<div class="pc"><div>' + img + '</div><div class="pb"><div class="tag">' + p.cat + '</div><h3>' + p.name +
+    return '<div class="pc"><div class="pc-media">' + img + '</div><div class="pb"><div class="tag">' + p.cat + '</div><h3>' + p.name +
       '</h3><p>' + p.desc + '</p>' + rv + '<div class="pf"><span class="price">' + money(p.price) +
       '</span><button class="ab" onclick="add(' + p.id + ')">' + T('shop_add') + '</button></div></div></div>';
   }).join('') : '<div class="empty" style="grid-column:1/-1">' + T('shop_empty') + '</div>';

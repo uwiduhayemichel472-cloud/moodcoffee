@@ -48,9 +48,11 @@ h2 em{font-style:italic;color:var(--gl)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px}
 .pc{background:var(--dk);border:1px solid rgba(212,160,96,.12);border-radius:10px;overflow:hidden;transition:transform .25s,border-color .25s}
 .pc:hover{transform:translateY(-4px);border-color:rgba(212,160,96,.4)}
-.pc img{width:100%;height:180px;object-fit:cover;display:block;filter:brightness(.85)}
-.pc .pc-img{image-rendering:auto;-webkit-backface-visibility:hidden;backface-visibility:hidden}
-.pc .ph{width:100%;height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:linear-gradient(135deg,var(--dk),var(--esp))}
+/* Product media: fixed 4:3 stage — any uploaded image fits 100% inside,
+   never cropped, on every device */
+.pc .pc-media{position:relative;width:100%;aspect-ratio:4/3;overflow:hidden;background:linear-gradient(140deg,#31160a,#1a0a00)}
+.pc img.pc-img{width:100%;height:100%;object-fit:contain;display:block;filter:brightness(.97);-webkit-backface-visibility:hidden;backface-visibility:hidden}
+.pc .ph{position:absolute;inset:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3rem;background:linear-gradient(135deg,var(--dk),var(--esp))}
 .pc .pb{padding:18px}
 .pc .tag{font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
 .pc h3{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:300;color:var(--foam);margin-bottom:6px}
@@ -153,7 +155,7 @@ label input:focus{border-color:var(--gold)}
 .x:hover{color:var(--gold)}
 #cartItems{flex:1;overflow-y:auto;padding:16px 24px}
 .ci{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid rgba(212,160,96,.08)}
-.ci-img{width:54px;height:54px;border-radius:9px;object-fit:cover;background:linear-gradient(135deg,var(--dk),var(--esp));flex-shrink:0}
+.ci-img{width:54px;height:54px;border-radius:9px;object-fit:contain;background:linear-gradient(135deg,var(--dk),var(--esp));flex-shrink:0}
 .ci-img.ph{display:flex;align-items:center;justify-content:center;font-size:1.6rem;color:var(--gl)}
 .ci .ii{flex:1}
 .ci b{font-family:'Cormorant Garamond',serif;font-weight:300;color:var(--foam);font-size:1rem;display:block}
@@ -371,7 +373,6 @@ label input:focus{border-color:var(--gold)}
   .pc .pb{padding:12px}
   .pc h3{font-size:1.2rem}
   .pc p{font-size:.72rem;min-height:0}
-  .pc img,.pc .ph{height:120px}
   .price{font-size:1.1rem}
   .ab{padding:7px 10px;font-size:.58rem}
   .cats{gap:8px}

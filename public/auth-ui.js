@@ -14,6 +14,7 @@
     '@keyframes moodGold{0%{transform:translate3d(-5%,-3%,0) scale(1);opacity:.85}100%{transform:translate3d(5%,4%,0) scale(1.18);opacity:1}}' +
     '.mood-auth-media::after{content:\'\';position:absolute;inset:0;z-index:2;background:linear-gradient(120deg,rgba(18,7,0,.25) 35%,rgba(12,5,0,.62));pointer-events:none}' +
     '.mood-auth-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:3}' +
+    '.mood-auth-shade{position:absolute;inset:0;z-index:4;background:linear-gradient(115deg,rgba(14,6,0,.15) 30%,rgba(10,4,0,.58));pointer-events:none}' +
     '.mood-auth-brand{position:absolute;left:24px;bottom:20px;z-index:5;font-family:\'Cormorant Garamond\',serif;font-weight:300;font-size:1.4rem;letter-spacing:.16em;color:#fdf6ee;text-transform:uppercase;text-shadow:0 2px 14px rgba(0,0,0,.5)}' +
     '.mood-auth-brand b{color:#e8c080;font-weight:300}' +
     '.mood-auth-tagline{position:absolute;left:24px;bottom:48px;z-index:5;font-family:\'Jost\',sans-serif;font-size:.58rem;letter-spacing:.3em;text-transform:uppercase;color:rgba(232,192,128,.8);text-shadow:0 1px 8px rgba(0,0,0,.5)}' +
@@ -47,6 +48,14 @@
   st.textContent = CSS;
   document.head.appendChild(st);
 
+  /* Curated, free-license promo videos (Mixkit). Used when the admin has not
+     activated a video yet, so Login / Sign-up always looks alive. */
+  var FALLBACK_VIDEOS = [
+    { url: 'https://assets.mixkit.co/videos/43941/43941-720.mp4', poster: 'https://assets.mixkit.co/videos/43941/43941-thumb-720-0.jpg' },
+    { url: 'https://assets.mixkit.co/videos/15131/15131-720.mp4', poster: 'https://assets.mixkit.co/videos/15131/15131-thumb-720-0.jpg' },
+    { url: 'https://assets.mixkit.co/videos/3573/3573-720.mp4', poster: 'https://assets.mixkit.co/videos/3573/3573-thumb-720-0.jpg' }
+  ];
+
   window.moodAuthMediaHtml = function () {
     var pills = [
       'Freshly Roasted', 'Golden Hour', 'Artisan Bakes', 'Pure Coffee',
@@ -55,6 +64,7 @@
     var html = pills.map(function(w){ return '<span class="mword-pill">'+w+'</span>'; }).join('');
     return '<div class="mood-auth-media">' +
       '<video class="mood-auth-video" muted loop playsinline preload="metadata"></video>' +
+      '<div class="mood-auth-shade"></div>' +
       '<div class="mood-auth-words-below">' +
       '<div class="mword-track">' + html + html + '</div>' +
       '</div>' +
@@ -66,15 +76,27 @@
   window.moodAuthMediaInit = function () {
     var v = document.querySelector('.mood-auth-video');
     if (!v) return;
+    var tryPlay = function () { var p = v.play(); if (p && p.catch) p.catch(function () {}); };
+    var use = function (src, poster) {
+      if (!src) return;
+      if (poster && !v.poster) v.poster = poster;
+      v.src = src;
+      v.onloadeddata = tryPlay;
+      v.load();
+      tryPlay();
+      v.addEventListener('mouseenter', tryPlay);
+      v.addEventListener('mouseleave', function () { try { v.pause(); } catch (e) {} });
+    };
     fetch('/api/auth-video', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (j && j.video && j.video.url) {
-        v.src = j.video.url;
-        var tryPlay = function () { var p = v.play(); if (p && p.catch) p.catch(function () {}); };
-        v.onloadeddata = tryPlay;
-        v.load();
-        v.addEventListener('mouseenter', tryPlay);
-        v.addEventListener('mouseleave', function () { try { v.pause(); } catch (e) {} });
+        use(j.video.url);
+      } else {
+        var f = FALLBACK_VIDEOS[Math.floor(Math.random() * FALLBACK_VIDEOS.length)];
+        use(f.url, f.poster);
       }
-    }).catch(function () {});
+    }).catch(function () {
+      var f = FALLBACK_VIDEOS[0];
+      use(f.url, f.poster);
+    });
   };
 })();

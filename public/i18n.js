@@ -867,7 +867,7 @@ const I18N = (function () {
 
       /* Account */
       acc_title: 'Konti Yanjye',
-      acc_profile: 'Profilo yawe kuri',
+      acc_profile: 'Profile yawe kuri',
       acc_name: 'Izina',
       acc_email: 'Imeyili',
       acc_phone: 'Nomero',

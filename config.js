@@ -16,12 +16,10 @@ module.exports = {
     customer: 'mood_sess',
     admin: 'mood_asess',
     httpOnly: true,
-    sameSite: 'Lax',
     // Set to true in production over HTTPS
     secure: process.env.COOKIE_SECURE === '1'
   },
   // Outgoing email (SMTP). You can set these here OR, better, in the
-  // Admin panel → Settings → Email (SMTP) so you don't need a restart.
   // The admin panel values override these whenever they are filled in.
   smtp: {
     host: process.env.SMTP_HOST || '',
