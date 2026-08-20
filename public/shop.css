@@ -50,7 +50,7 @@ h2 em{font-style:italic;color:var(--gl)}
 .pc:hover{transform:translateY(-4px);border-color:rgba(212,160,96,.4)}
 /* Product media: fixed 4:3 stage — any uploaded image fits 100% inside,
    never cropped, on every device */
-.pc .pc-media{position:relative;width:100%;aspect-ratio:4/3;overflow:hidden;background:linear-gradient(140deg,#31160a,#1a0a00)}
+.pc .pc-media{position:relative;width:100%;aspect-ratio:3/2;overflow:hidden;background:linear-gradient(140deg,#2b1206,#160800)}
 .pc img.pc-img{width:100%;height:100%;object-fit:contain;display:block;filter:brightness(.97);-webkit-backface-visibility:hidden;backface-visibility:hidden}
 .pc .ph{position:absolute;inset:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3rem;background:linear-gradient(135deg,var(--dk),var(--esp))}
 .pc .pb{padding:18px}
