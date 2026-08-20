@@ -9,7 +9,7 @@
 const mysql = require('mysql2/promise');
 const cfg = require('./config.js');
 
-const U = id => 'https://images.unsplash.com/' + id + '?w=600&q=80&auto=format&fit=crop';
+const U = id => 'https://images.unsplash.com/' + id + '?w=600&h=400&q=80&auto=format&fit=crop';
 
 const ITEMS = [
   // ── COFFEE (20) ──
