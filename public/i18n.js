@@ -10,7 +10,7 @@ const SOCIAL = {
   instagram: 'https://www.instagram.com/ablackadabla/',  // ← your Instagram
   facebook:  'https://www.facebook.com/yourpage',          // ← your Facebook
   tiktok:    'https://www.tiktok.com/@yourhandle',         // ← your TikTok
-  whatsapp:  '+250700000000'                               // ← your WhatsApp number
+  whatsapp:  '+250 793 761 101'                               // ← your WhatsApp number
 };
 const WA_NUM = (SOCIAL.whatsapp || '').replace(/[^\d]/g, '');
 const WA_LINK = WA_NUM ? 'https://wa.me/' + WA_NUM : '#';
